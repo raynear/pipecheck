@@ -1,1 +1,8 @@
-A great app built with Flutter. Replace this placeholder description with your own app store listing copy. This text is part of the boilerplate template.
+PipeCheck は、ビルドとリリースのパイプラインが最初から最後まで正しく動作するかを 確認する軽量ユーティリティです。すばやくチェックし、各ステージをひと目で確認し、本番に届く前に設定の抜け漏れを見つけましょう。
+
+- パイプラインの各ステージを数秒で検証
+- すべてのステップの成功／失敗を明確に表示
+- オフラインで動作、不要な情報は保存しません
+- 無駄のないシンプルな画面
+
+PipeCheck はリリース日を退屈なものにします — 本来そうあるべきです。

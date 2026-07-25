@@ -1,1 +1,8 @@
-A great app built with Flutter. Replace this placeholder description with your own app store listing copy. This text is part of the boilerplate template.
+PipeCheck is a lightweight utility for verifying that your build and release pipeline works end to end. Run a quick check, review each stage at a glance, and catch configuration gaps before they reach production.
+
+- Verify pipeline stages in seconds
+- Clear pass/fail status for every step
+- Works offline; keeps nothing you don't ask it to
+- Clean, distraction-free interface
+
+PipeCheck keeps release day boring — the way it should be.

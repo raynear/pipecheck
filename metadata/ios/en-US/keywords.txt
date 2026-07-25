@@ -1,1 +1,1 @@
-app, productivity
+pipeline,ci,cd,build,release,checklist,devtools,utility,verify,deploy

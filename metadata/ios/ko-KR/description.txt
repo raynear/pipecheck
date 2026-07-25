@@ -1,1 +1,8 @@
-A great app built with Flutter. Replace this placeholder description with your own app store listing copy. This text is part of the boilerplate template.
+PipeCheck는 빌드·릴리스 파이프라인이 처음부터 끝까지 제대로 동작하는지 확인하는 가벼운 유틸리티입니다. 빠르게 점검하고, 각 단계를 한눈에 확인하고, 배포 전에 설정 누락을 잡아내세요.
+
+- 파이프라인 단계를 몇 초 만에 검증
+- 모든 단계의 성공/실패를 명확하게 표시
+- 오프라인 동작, 불필요한 정보는 저장하지 않음
+- 군더더기 없는 깔끔한 화면
+
+PipeCheck는 배포일을 지루하게 만듭니다 — 원래 그래야 하는 것처럼요.

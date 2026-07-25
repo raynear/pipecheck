@@ -1,7 +1,7 @@
 {
-  "product_id": "premium_lifetime.com.example.myapp",
+  "product_id": "premium_lifetime.com.raynear.pipecheck",
   "type": "non_consumable",
-  "reference_name": "premium_lifetime.com.example.myapp",
+  "reference_name": "premium_lifetime.com.raynear.pipecheck",
   "pricing": {
     "tier": 60
   },

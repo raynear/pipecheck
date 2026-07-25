@@ -1,1 +1,1 @@
-A great app built with Flutter
+Prüfe deine Build- und Release-Pipeline von Anfang bis Ende — schnell und fokussiert.

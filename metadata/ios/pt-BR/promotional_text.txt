@@ -1,1 +1,1 @@
-A great app built with Flutter
+Verifique seu pipeline de build e lançamento de ponta a ponta — rápido e direto.

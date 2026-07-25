@@ -1,7 +1,7 @@
 {
-  "product_id": "premium_monthly.com.example.myapp",
+  "product_id": "premium_monthly.com.raynear.pipecheck",
   "type": "auto_renewable_subscription",
-  "reference_name": "premium_monthly.com.example.myapp",
+  "reference_name": "premium_monthly.com.raynear.pipecheck",
   "pricing": {
     "tier": 5
   },

@@ -1,1 +1,8 @@
-A great app built with Flutter. Replace this placeholder description with your own app store listing copy. This text is part of the boilerplate template.
+PipeCheck 是一款轻量工具，用于验证你的构建与发布流水线是否端到端正常运行。快速检查、一目了然地查看每个阶段，并在问题进入生产环境之前发现配置缺失。
+
+- 数秒内验证流水线各阶段
+- 清晰显示每一步的成功/失败
+- 离线运行，不保存你未要求的数据
+- 简洁无干扰的界面
+
+PipeCheck 让发布日变得平淡无奇 —— 本该如此。

@@ -1,1 +1,1 @@
-A great app built with Flutter
+빌드·릴리스 파이프라인을 처음부터 끝까지 검증하세요 — 빠르고, 간결하게.

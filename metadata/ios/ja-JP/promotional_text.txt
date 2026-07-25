@@ -1,1 +1,1 @@
-A great app built with Flutter
+ビルドとリリースのパイプラインを端から端まで検証 — 速く、シンプルに。

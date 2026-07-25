@@ -76,7 +76,7 @@ listing:
   #             https://<owner>.github.io/<repo>/privacy_policy.html
   #             (.github/workflows/legal-pages.yml, github_repository 필요;
   #              private repo는 GitHub 유료 플랜에서만 Pages 동작)
-  legal_hosting: "firebase"      # firebase | github
+  legal_hosting: "github"        # firebase | github
   # privacy_policy_url을 비워두면 gen_env가 legal_hosting 방식대로 URL을
   # 도출해 앱에 주입합니다. 직접 호스팅한 URL이 있으면 여기에 명시하세요.
   privacy_policy_url: ""
