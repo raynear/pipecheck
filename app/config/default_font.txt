@@ -1,0 +1,18 @@
+"ko": {
+	"Display": "Black Han Sans",           // 제목, 헤더용 장식 폰트
+	"Headline": "Do Hyeon",                // 헤드라인용 굵은 폰트
+	"Title": "Noto Sans KR Bold",          // 중요 제목용 폰트
+	"Rounded": "Nanum Barun Gothic",       // 부드러운 모서리의 고딕체
+	"Slab": "Roboto Slab KR",              // 굵은 세리프체
+	"Condensed": "Noto Sans KR Condensed", // 좁은 폭의 폰트
+	"Decorative": "Gaegu",                 // 장식용 폰트
+	"Script": "Stylish",                   // 캘리그라피 스타일
+	"Comic": "Poor Story",                 // 만화체
+	"Pixel": "DungGeunMo",                 // 픽셀/레트로 스타일
+	"Brush": "Yeon Sung",                  // 붓글씨체
+	"Body": "Noto Sans KR",                // 본문용 기본 폰트
+	"Quote": "Nanum Myeongjo",             // 인용구나 강조 텍스트용 폰트
+	"Label": "Noto Sans KR Light",         // 작은 레이블이나 캡션용 폰트
+	"Code": "D2Coding",                    // 코드나 등간격 텍스트용 폰트
+	"Brand": "Black Han Sans"              // 브랜딩/로고용 폰트
+}

@@ -1,0 +1,62 @@
+targets:
+  $default:
+    builders:
+      # Enable all builders
+      boilerplate:table_generator:
+        enabled: true
+        options:
+          # 자동 업데이트 설정
+          auto_update:
+            database: true
+            providers: true
+        generate_for:
+          include:
+            - lib/data/definitions/*.dart
+          exclude:
+            - lib/**/*.g.dart
+            - lib/**/*.freezed.dart
+            - lib/**/*.drift.dart
+            - lib/**/*.model.dart
+            - lib/**/*.repository.dart
+      drift_dev:
+        enabled: true
+        generate_for:
+          include:
+            - lib/**/*.drift.dart
+            - lib/**/database.dart
+          exclude:
+            - lib/**/*.g.dart
+      freezed:
+        enabled: true
+        generate_for:
+          include:
+            - lib/**/*.model.dart
+            - lib/core/state/*.dart
+            - lib/features/**/models/*.dart
+          exclude:
+            - lib/**/*.g.dart
+            - lib/**/*.freezed.dart
+      json_serializable:
+        enabled: true
+        generate_for:
+          include:
+            - lib/**/*.dart
+          exclude:
+            - lib/**/*.g.dart
+            - lib/**/*.freezed.dart
+            - lib/**/*.drift.dart
+            - lib/**/*.repository.dart
+            - lib/data/generators/**/*.dart
+
+builders:
+  table_generator:
+    import: "package:boilerplate/data/table_generator/builder.dart"
+    builder_factories: ["tableGeneratorBuilder"]
+    build_extensions:
+      ".dart": [".drift.dart", ".model.dart", ".repository.dart"]
+    auto_apply: root_package
+    build_to: source
+    runs_before:
+      - freezed
+      - json_serializable
+      - drift_dev

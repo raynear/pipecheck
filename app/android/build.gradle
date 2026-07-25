@@ -1,0 +1,71 @@
+// FlutterFire 플러그인은 app/build.gradle에서 조건부 legacy apply되므로
+// (plugins{} 블록은 조건부가 불가) 클래스패스를 여기서 공급한다.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.google.gms:google-services:4.4.2"
+        classpath "com.google.firebase:firebase-crashlytics-gradle:3.0.2"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+def newBuildDir = rootProject.layout.buildDirectory.dir("../../build").get()
+rootProject.layout.buildDirectory.value(newBuildDir)
+
+subprojects {
+    project.layout.buildDirectory.value(newBuildDir.dir(project.name))
+}
+// 모든 서브프로젝트(플러그인 포함)의 Java/Kotlin 컴파일 타깃을 앱 모듈(17)과 통일한다.
+// home_widget 등 일부 플러그인이 기본 jvmTarget 1.8로 컴파일돼 "Cannot inline bytecode
+// built with JVM target 11 into bytecode that is being built with JVM target 1.8"로
+// release AAB 조립이 깨지던 문제의 근본수정 — 플러그인 이름 하드코딩 없이 일괄 주입해
+// 다음에 추가되는 플러그인에서도 재발하지 않는다.
+// (afterEvaluate 등록은 아래 evaluationDependsOn 블록보다 먼저여야 한다 — 그 블록이
+//  :app을 조기 평가시키면 이미 평가된 프로젝트에 afterEvaluate를 걸 수 없어 실패한다.)
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+                if (project.android.hasProperty("kotlinOptions")) {
+                    kotlinOptions {
+                        jvmTarget = "17"
+                    }
+                }
+            }
+        }
+    }
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+// home_widget가 선언한 동적 버전 `androidx.glance:glance-appwidget:1.+`이 최근 공개된
+// 알파(1.3.0-alpha02, compileSdk 37 · AGP 9.1 요구)로 흘러가 이 저장소의 고정 스택
+// (Flutter 3.44 · compileSdk 36 · AGP 8.11 — gradle.properties에서 AGP 9 opt-out)과
+// 충돌해 release 조립을 깬다. AGP 8/compileSdk 36과 호환되는 안정판으로 고정한다.
+// ponytail: compileSdk 36·AGP 8.x 상한 고정 — compileSdk 37+/AGP 9 상향 시 이 force 제거
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force "androidx.glance:glance-appwidget:1.1.1"
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.layout.buildDirectory
+}

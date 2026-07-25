@@ -1,0 +1,7 @@
+# flutter test 기본 실행 설정
+tags:
+  screenshot:
+    # 스크린샷 테스트는 디바이스 하니스(./run screenshot → flutter drive) 전용.
+    # CI의 flutter test에서는 플러그인 채널(path_provider, google_fonts)이
+    # 없어 항상 실패하므로 기본 스킵 (P0-9).
+    skip: "스크린샷 하니스 전용 — ./run screenshot으로 실행"

@@ -1,0 +1,225 @@
+name: App Store / Google Play Deploy
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  # ── QA 게이트 (P0-9) — 배포 잡은 이 잡 통과 후에만 실행 ──
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # ── 태그 형식 게이트 (P1-12) — 배포 태그는 vX.Y.Z semver만 허용 ──
+      # (template-v* / cli-v* 릴리즈 태그는 이 워크플로를 트리거하지 않음 — CHANGELOG.md 참고)
+      - name: Validate tag is semver (vX.Y.Z)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          if ! printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::배포 태그 '$tag'가 semver 형식(vX.Y.Z)이 아닙니다. 배포를 중단합니다."
+            exit 1
+          fi
+          echo "✓ 태그 $tag — semver 형식 확인"
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Codegen (./run build)
+        run: ./run build
+
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        working-directory: app
+        run: flutter test --no-pub
+
+  ios:
+    needs: qa
+    runs-on: macos-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Read fastlane ref pin
+        id: fastlane_ref
+        run: |
+          ref=$(grep -E '^[[:space:]]*fastlane_ref:' project.yaml | head -1 | sed -E 's/^[^:]*:[[:space:]]*"?([^"#]+[^"# ])"?.*$/\1/')
+          echo "ref=${ref:-main}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out fastlane repo
+        uses: actions/checkout@v4
+        with:
+          repository: raynear/flutter-fastlane
+          path: fastlane
+          ref: ${{ steps.fastlane_ref.outputs.ref }}
+          token: ${{ secrets.FASTLANE_REPO_TOKEN }}
+
+      - name: Create secrets file (root .env)
+        run: |
+          echo "$DOTENV" > .env
+        env:
+          DOTENV: ${{ secrets.DOTENV }}
+
+      - name: Set up Git authentication
+        env:
+          GIT_AUTH_TOKEN: ${{ secrets.GIT_AUTH_TOKEN }}
+        run: |
+          git config --global url."https://${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: fastlane
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Generate runtime env artifacts
+        run: |
+          (cd tools/cli && dart pub get)
+          dart run tools/cli/bin/gen_env.dart
+
+      - name: Setup Keychain
+        run: |
+          security create-keychain -p "" build.keychain
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -l
+          security set-keychain-settings -u build.keychain
+
+      - name: Get Dependencies
+        working-directory: app
+        run: |
+          flutter pub get
+          cd ios && pod install
+
+      - name: Run Code Generation
+        working-directory: app
+        run: ./build.sh
+
+      - name: Setup Match
+        working-directory: fastlane
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: |
+          APP_ID=$(grep -E '^\s*package_name:' ../project.yaml | head -1 | sed -E 's/^[^:]+:\s*"?([^"]+)"?\s*$/\1/')
+          bundle exec fastlane match appstore \
+            --readonly \
+            --app_identifier "$APP_ID" \
+            --keychain_name build.keychain
+
+      - name: Build and deploy
+        working-directory: fastlane
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          MATCH_KEYCHAIN_NAME: build.keychain
+        run: |
+          echo "${APP_STORE_CONNECT_API_KEY_CONTENT}" | base64 --decode > "$HOME/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          export APP_STORE_CONNECT_API_KEY_FILE="$HOME/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          bundle exec fastlane build_and_upload_ios
+
+  android:
+    needs: qa
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Read fastlane ref pin
+        id: fastlane_ref
+        run: |
+          ref=$(grep -E '^[[:space:]]*fastlane_ref:' project.yaml | head -1 | sed -E 's/^[^:]*:[[:space:]]*"?([^"#]+[^"# ])"?.*$/\1/')
+          echo "ref=${ref:-main}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out fastlane repo
+        uses: actions/checkout@v4
+        with:
+          repository: raynear/flutter-fastlane
+          path: fastlane
+          ref: ${{ steps.fastlane_ref.outputs.ref }}
+          token: ${{ secrets.FASTLANE_REPO_TOKEN }}
+
+      - name: Create secrets file (root .env)
+        run: |
+          echo "$DOTENV" > .env
+        env:
+          DOTENV: ${{ secrets.DOTENV }}
+
+      - name: Set up Git authentication
+        env:
+          GIT_AUTH_TOKEN: ${{ secrets.GIT_AUTH_TOKEN }}
+        run: |
+          git config --global url."https://${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: fastlane
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Generate runtime env artifacts
+        run: |
+          (cd tools/cli && dart pub get)
+          dart run tools/cli/bin/gen_env.dart
+
+      - name: Set up Android keystore
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "${ANDROID_KEYSTORE}" | base64 --decode > app/android/app/release.keystore
+          echo "storeFile=release.keystore" >> app/android/key.properties
+          echo "keyAlias=${ANDROID_KEY_ALIAS}" >> app/android/key.properties
+          echo "storePassword=${ANDROID_STORE_PASSWORD}" >> app/android/key.properties
+          echo "keyPassword=${ANDROID_KEY_PASSWORD}" >> app/android/key.properties
+
+      - name: Set up Google Play Config
+        env:
+          GOOGLE_PLAY_CONFIG_JSON: ${{ secrets.GOOGLE_PLAY_CONFIG_JSON }}
+        run: |
+          echo "${GOOGLE_PLAY_CONFIG_JSON}" | base64 --decode > google-play-config.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=google-play-config.json" >> $GITHUB_ENV
+
+      - name: Get Dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Run Code Generation
+        working-directory: app
+        run: ./build.sh
+
+      - name: Build and deploy
+        working-directory: fastlane
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_KEYCHAIN_NAME: build.keychain
+        run: |
+          bundle exec fastlane build_and_upload_android

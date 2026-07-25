@@ -1,0 +1,26 @@
+name: firebase_services
+description: Firebase Analytics / Crashlytics / Remote Config engines for Flutter apps (app-agnostic)
+version: 0.0.1
+publish_to: 'none'
+resolution: workspace
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  utils:
+    path: ../utils
+  firebase_core: ^4.3.0
+  firebase_analytics: ^12.1.0
+  firebase_crashlytics: ^5.0.6
+  firebase_remote_config: ^6.1.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0          # workspace 단일 해석 — app과 정렬 (P2-19c)
+
+flutter:

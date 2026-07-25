@@ -1,0 +1,26 @@
+name: ads
+description: AdMob ad engines (banner/interstitial/rewarded/native/app-open) + UMP consent for Flutter apps (app-agnostic)
+version: 0.0.1
+publish_to: 'none'
+resolution: workspace
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  utils:
+    path: ../utils
+  google_mobile_ads: ^7.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0          # workspace 단일 해석 — app과 정렬 (P2-19c)
+
+# 폴백 이미지(assets/images/fallback_banner.jpg, fallback_fullscreen.jpg)는
+# 소비 앱이 번들한다 — Image.asset이 앱 번들에서 해석한다(포크별 커스텀 가능,
+# 네이티브 app-id와 같은 소비자 책임 계약). 패키지가 직접 번들하지 않는다.
+flutter:

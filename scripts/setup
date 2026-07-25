@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Flutter BoilerPlate - Setup Command
+# 프로젝트 초기 설정을 수행합니다.
+# Usage: ./scripts/setup [options] (or ./setup via symlink)
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR/.."
+CLI_DIR="$PROJECT_ROOT/tools/cli"
+
+cd "$PROJECT_ROOT"
+dart run "$CLI_DIR/bin/setup.dart" "$@"

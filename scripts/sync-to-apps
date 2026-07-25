@@ -1,0 +1,352 @@
+#!/usr/bin/env bash
+# ============================================================
+# Boilerplate → App 프로젝트 공통 파일 동기화
+# ============================================================
+# 사용법: ./scripts/sync-to-apps [--dry-run] [--app <name>] [--force]
+#
+# SSOT:
+#   - 동기화 파일 목록: sync-manifest.yaml (루트)
+#   - 파생 앱 레지스트리: apps.yaml (루트)
+#
+# 가드 (--force 로 우회 가능, --dry-run 은 경고 후 계속):
+#   - 템플릿 더티트리 거부: git status --porcelain 이 비어야 진행
+#   - untagged HEAD 거부: template-v* 태그가 정확히 가리키는 커밋에서만 sync
+#     (v* 태그는 배포 게이트용이므로 템플릿 릴리즈에 사용 금지)
+#   - 대상 앱 더티트리: 해당 앱만 skip + 경고 (전체 중단 아님)
+#
+# sync 성공한 각 앱 루트에 template.lock 을 기록한다
+# (template_version / template_commit / synced_at / files).
+#
+# NOTE: fastlane/ 디렉토리는 별도 repo로 분리되어 각 앱에서 직접
+#       clone/pull 하므로 여기서는 동기화 대상에 포함하지 않습니다.
+# ============================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BP_ROOT="$(dirname "$SCRIPT_DIR")"
+MANIFEST="$BP_ROOT/sync-manifest.yaml"
+REGISTRY="$BP_ROOT/apps.yaml"
+
+DRY_RUN=false
+FORCE=false
+TARGET_APP=""
+
+usage() {
+  cat <<EOF
+Usage: $0 [--dry-run] [--app <name>] [--force]
+
+  --dry-run   변경 없이 동기화 내용만 출력 (가드는 경고로 완화)
+  --app NAME  apps.yaml 에 등록된 특정 앱만 동기화
+  --force     더티트리/untagged HEAD 가드 우회 (경고 출력)
+  -h, --help  이 도움말 출력
+
+동기화 파일 목록: sync-manifest.yaml / 앱 레지스트리: apps.yaml
+EOF
+}
+
+warn() { echo "[WARN] $*" >&2; }
+die()  { echo "[ERROR] $*" >&2; exit 1; }
+
+# 인자 파싱
+while [ $# -gt 0 ]; do
+  case $1 in
+    --dry-run) DRY_RUN=true; shift ;;
+    --force)   FORCE=true; shift ;;
+    --app)
+      [ $# -ge 2 ] || die "--app 에 앱 이름이 필요합니다"
+      TARGET_APP="$2"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+[ -f "$MANIFEST" ] || die "매니페스트가 없습니다: $MANIFEST"
+[ -f "$REGISTRY" ] || die "앱 레지스트리가 없습니다: $REGISTRY"
+
+# ------------------------------------------------------------
+# YAML 파싱 (python3+pyyaml 우선, 없으면 보수적 awk 파싱)
+# ------------------------------------------------------------
+have_pyyaml() {
+  command -v python3 >/dev/null 2>&1 && python3 -c 'import yaml' >/dev/null 2>&1
+}
+
+# 출력: "path|enabled|reason" (한 줄 = 한 항목)
+parse_manifest() {
+  if have_pyyaml; then
+    python3 - "$MANIFEST" <<'PY'
+import sys, yaml
+data = yaml.safe_load(open(sys.argv[1], encoding="utf-8")) or {}
+for entry in data.get("files") or []:
+    path = entry["path"]
+    enabled = str(entry.get("enabled", True)).lower()
+    reason = entry.get("reason") or ""
+    print(f"{path}|{enabled}|{reason}")
+PY
+  else
+    awk '
+      function flush() { if (path != "") print path "|" enabled "|" reason; path = "" }
+      /^[[:space:]]*-[[:space:]]+path:/ {
+        flush()
+        v = $0; sub(/^[[:space:]]*-[[:space:]]+path:[[:space:]]*/, "", v)
+        gsub(/^["'\'']|["'\'']$/, "", v)
+        path = v; enabled = "true"; reason = ""; next
+      }
+      /^[[:space:]]+enabled:/ {
+        if (path != "") { v = $0; sub(/^[[:space:]]+enabled:[[:space:]]*/, "", v); enabled = v }
+        next
+      }
+      /^[[:space:]]+reason:/ {
+        if (path != "") {
+          v = $0; sub(/^[[:space:]]+reason:[[:space:]]*/, "", v)
+          gsub(/^["'\'']|["'\'']$/, "", v); reason = v
+        }
+        next
+      }
+      END { flush() }
+    ' "$MANIFEST"
+  fi
+}
+
+# 출력: "name|path" (한 줄 = 한 앱)
+parse_apps() {
+  if have_pyyaml; then
+    python3 - "$REGISTRY" <<'PY'
+import sys, yaml
+data = yaml.safe_load(open(sys.argv[1], encoding="utf-8")) or {}
+for app in data.get("apps") or []:
+    print(f"{app['name']}|{app['path']}")
+PY
+  else
+    awk '
+      function flush() { if (name != "" && p != "") print name "|" p; name = ""; p = "" }
+      /^[[:space:]]*-[[:space:]]+name:/ {
+        flush()
+        v = $0; sub(/^[[:space:]]*-[[:space:]]+name:[[:space:]]*/, "", v)
+        gsub(/^["'\'']|["'\'']$/, "", v); name = v; next
+      }
+      /^[[:space:]]+path:/ {
+        if (name != "") {
+          v = $0; sub(/^[[:space:]]+path:[[:space:]]*/, "", v)
+          gsub(/^["'\'']|["'\'']$/, "", v); p = v
+        }
+        next
+      }
+      END { flush() }
+    ' "$REGISTRY"
+  fi
+}
+
+if ! have_pyyaml; then
+  warn "python3+pyyaml 미감지 — 보수적 파싱으로 대체 (sync-manifest.yaml/apps.yaml 의 기본 스키마만 지원)"
+fi
+
+MANIFEST_ENTRIES="$(parse_manifest)"
+APP_ENTRIES="$(parse_apps)"
+[ -n "$MANIFEST_ENTRIES" ] || die "sync-manifest.yaml 에서 files 항목을 읽지 못했습니다"
+[ -n "$APP_ENTRIES" ] || die "apps.yaml 에서 apps 항목을 읽지 못했습니다"
+
+# ------------------------------------------------------------
+# 가드 위반 처리: --force/--dry-run 이면 경고 후 계속, 아니면 중단
+# ------------------------------------------------------------
+guard_fail() {
+  if [ "$FORCE" = true ]; then
+    warn "$1 (--force 로 계속 진행)"
+  elif [ "$DRY_RUN" = true ]; then
+    warn "$1 (--dry-run: 계속 진행)"
+  else
+    die "$1"
+  fi
+}
+
+# 가드 1: 템플릿 더티트리 거부
+if [ -n "$(git -C "$BP_ROOT" status --porcelain)" ]; then
+  guard_fail "템플릿 working tree 가 더티합니다. 커밋/스태시 후 다시 실행하세요 (git status 확인)"
+fi
+
+# 가드 2: untagged HEAD 거부 — template-v* 태그에서만 sync 가능
+# (같은 커밋에 cli-v* 등 다른 태그가 함께 있어도 template-v* 존재가 기준 —
+#  describe --exact-match 는 태그 하나만 반환해 다중 태그에서 오거부한다)
+TEMPLATE_COMMIT="$(git -C "$BP_ROOT" rev-parse HEAD)"
+TEMPLATE_VERSION="$(git -C "$BP_ROOT" tag --points-at HEAD 'template-v*' | sort -V | tail -1)"
+if [ -z "$TEMPLATE_VERSION" ]; then
+  other_tag="$(git -C "$BP_ROOT" describe --tags --exact-match 2>/dev/null || true)"
+  if [ -n "$other_tag" ]; then
+    guard_fail "HEAD 태그 '$other_tag' 는 템플릿 릴리즈 태그가 아닙니다. template-v* 태그에서만 sync 가능합니다 (v* 는 배포 게이트용)"
+    TEMPLATE_VERSION="non-template-tag-$other_tag"
+  else
+    guard_fail "HEAD 가 태그를 가리키지 않습니다. template-v* 태그에서만 sync 가능합니다"
+    TEMPLATE_VERSION="untagged-$(git -C "$BP_ROOT" rev-parse --short HEAD)"
+  fi
+fi
+
+# ------------------------------------------------------------
+# 매니페스트 → 동기화 대상 확정 (enabled 항목 실존 검증 포함)
+# ------------------------------------------------------------
+ENABLED_FILES=""
+while IFS='|' read -r rel_path enabled reason; do
+  [ -n "$rel_path" ] || continue
+  if [ "$enabled" != "true" ]; then
+    echo "MANIFEST SKIP (disabled): $rel_path"
+    [ -n "$reason" ] && echo "  reason: $reason"
+    continue
+  fi
+  if [ ! -f "$BP_ROOT/$rel_path" ]; then
+    if [ "$FORCE" = true ]; then
+      warn "매니페스트 항목이 템플릿에 없습니다: $rel_path (--force 로 skip)"
+      continue
+    fi
+    die "매니페스트 항목이 템플릿에 없습니다: $rel_path — sync-manifest.yaml 에서 제거하거나 파일을 복구하세요"
+  fi
+  ENABLED_FILES="$ENABLED_FILES $rel_path"
+done <<EOF
+$MANIFEST_ENTRIES
+EOF
+[ -n "$ENABLED_FILES" ] || die "동기화할 enabled 파일이 없습니다"
+
+# ------------------------------------------------------------
+# 동기화 실행
+# ------------------------------------------------------------
+sync_file() {
+  local src="$1"
+  local dst="$2"
+
+  # 대상 디렉토리 생성
+  local dst_dir
+  dst_dir="$(dirname "$dst")"
+  if [ ! -d "$dst_dir" ]; then
+    if [ "$DRY_RUN" = true ]; then
+      echo "  MKDIR: $dst_dir"
+    else
+      mkdir -p "$dst_dir"
+    fi
+  fi
+
+  # diff 체크 — 동일하면 스킵
+  if [ -f "$dst" ] && diff -q "$src" "$dst" > /dev/null 2>&1; then
+    return
+  fi
+
+  if [ "$DRY_RUN" = true ]; then
+    if [ -f "$dst" ]; then
+      echo "  WOULD UPDATE: $(echo "$dst" | sed "s|$HOME/Project/||")"
+    else
+      echo "  WOULD CREATE: $(echo "$dst" | sed "s|$HOME/Project/||")"
+    fi
+  else
+    cp "$src" "$dst"
+    if [ -x "$src" ]; then
+      chmod +x "$dst"
+    fi
+    echo "  SYNCED: $(echo "$dst" | sed "s|$HOME/Project/||")"
+  fi
+}
+
+write_lock() {
+  local app_path="$1"
+  local lock="$app_path/template.lock"
+  {
+    echo "# template.lock — scripts/sync-to-apps 가 생성 (손 편집 금지)"
+    echo "template_version: $TEMPLATE_VERSION"
+    echo "template_commit: $TEMPLATE_COMMIT"
+    echo "synced_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "files:"
+    local f
+    for f in $ENABLED_FILES; do
+      echo "  - $f"
+    done
+  } > "$lock"
+  echo "  LOCK: $(echo "$lock" | sed "s|$HOME/Project/||")"
+}
+
+echo "============================================"
+echo "Boilerplate -> App Sync"
+echo "============================================"
+echo "Template: $TEMPLATE_VERSION ($TEMPLATE_COMMIT)"
+if [ "$DRY_RUN" = true ]; then
+  echo "Mode: DRY RUN (no files will be modified)"
+fi
+echo ""
+
+# 대상 앱 결정
+APP_NAMES=""
+while IFS='|' read -r name _path; do
+  [ -n "$name" ] && APP_NAMES="$APP_NAMES $name"
+done <<EOF
+$APP_ENTRIES
+EOF
+
+if [ -n "$TARGET_APP" ]; then
+  valid=false
+  for name in $APP_NAMES; do
+    if [ "$name" = "$TARGET_APP" ]; then
+      valid=true
+      break
+    fi
+  done
+  if [ "$valid" = false ]; then
+    die "Unknown app '$TARGET_APP' — apps.yaml 에 등록된 앱:$APP_NAMES"
+  fi
+fi
+
+SYNCED_APPS=0
+SKIPPED_APPS=0
+
+while IFS='|' read -r app raw_path; do
+  [ -n "$app" ] || continue
+  if [ -n "$TARGET_APP" ] && [ "$app" != "$TARGET_APP" ]; then
+    continue
+  fi
+
+  app_path="${raw_path/#\~/$HOME}"
+
+  if [ ! -d "$app_path" ]; then
+    echo "[$app] SKIP -- directory not found: $app_path"
+    SKIPPED_APPS=$((SKIPPED_APPS + 1))
+    continue
+  fi
+
+  # 대상 앱 더티트리 거부 (해당 앱만 skip, 전체 중단 아님)
+  if ! git -C "$app_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if [ "$FORCE" = true ]; then
+      warn "[$app] git repo 가 아니지만 --force 로 계속 진행"
+    else
+      warn "[$app] SKIP -- git repo 가 아닙니다: $app_path"
+      SKIPPED_APPS=$((SKIPPED_APPS + 1))
+      continue
+    fi
+  elif [ -n "$(git -C "$app_path" status --porcelain)" ]; then
+    if [ "$FORCE" = true ]; then
+      warn "[$app] working tree 가 더티하지만 --force 로 계속 진행"
+    else
+      warn "[$app] SKIP -- working tree 가 더티합니다. 커밋/스태시 후 다시 실행하세요"
+      SKIPPED_APPS=$((SKIPPED_APPS + 1))
+      continue
+    fi
+  fi
+
+  echo "[$app] Syncing to $app_path"
+
+  for rel_path in $ENABLED_FILES; do
+    sync_file "$BP_ROOT/$rel_path" "$app_path/$rel_path"
+  done
+
+  if [ "$DRY_RUN" = true ]; then
+    echo "  WOULD WRITE: $app/template.lock"
+  else
+    write_lock "$app_path"
+  fi
+
+  SYNCED_APPS=$((SYNCED_APPS + 1))
+  echo "[$app] Done"
+  echo ""
+done <<EOF
+$APP_ENTRIES
+EOF
+
+echo "============================================"
+echo "Sync complete. (synced: $SYNCED_APPS, skipped: $SKIPPED_APPS)"
+if [ "$DRY_RUN" = true ]; then
+  echo "Run without --dry-run to apply changes."
+fi
+echo "============================================"

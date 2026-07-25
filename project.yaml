@@ -1,0 +1,180 @@
+# ============================================
+# Project Configuration (프로젝트별 고유 설정)
+# ============================================
+# 앱마다 달라지는 설정을 이 파일에 정의합니다.
+# 보일러플레이트 공통 설정은 app_config.yaml을 참고하세요.
+
+project:
+  name: "My App"
+  # company_name → app_config.yaml (앱마다 동일)
+  package_name: "com.example.myapp"
+  description: "A great app built with Flutter"
+  version: "0.0.1"
+  github_repository: "your-org/myapp"     # e.g., "owner/repo"
+
+  # ── 카테고리 (iOS App Store / Google Play 공통) ──
+  # 아래 목록에서 선택:
+  #   productivity, utility, business, developer_tools,
+  #   education, reference, books,
+  #   entertainment, games, music, photo_video, graphics_design,
+  #   social, lifestyle, news, food_drink,
+  #   health_fitness, medical, sports,
+  #   finance, shopping,
+  #   travel, navigation, weather,
+  #   kids
+  category: "productivity"
+  secondary_category: ""
+
+# ── 연령등급 (App Store 심사용) ──
+# 값: 0 = None, 1 = Infrequent/Mild, 2 = Frequent/Intense
+# ./init 실행 시 자동으로 App Store Connect에 반영됩니다.
+age_rating:
+  cartoon_fantasy_violence: 0        # 만화/판타지 폭력
+  realistic_violence: 0              # 사실적 폭력
+  prolonged_graphic_sadistic_violence: 0  # 지속적/잔인한 폭력
+  profanity_crude_humor: 0           # 욕설/저속한 유머
+  mature_suggestive_themes: 0        # 성인/선정적 주제
+  horror_fear_themes: 0              # 공포/두려움 주제
+  medical_treatment_info: 0          # 의료 정보
+  alcohol_tobacco_drugs: 0           # 알코올/담배/약물
+  gambling: 0                        # 도박 (0 권장)
+  sexual_content_nudity: 0           # 성적 콘텐츠/노출
+  unrestricted_web_access: 0         # 무제한 웹 접근
+  gambling_contests: 0               # 도박/금융 대회 (0 권장)
+
+# ── 도구 핀 ──
+# fastlane은 git submodule (.gitmodules) — 핀은 submodule gitlink가 보유.
+# 이 fastlane_ref는 CI 체크아웃과 clone 폴백(submodule 미사용 컨텍스트)에서 쓰입니다.
+# submodule 핀 갱신: git -C fastlane fetch --tags && git -C fastlane checkout <새태그>
+#                    && git add fastlane && 커밋 (fastlane_ref도 같은 태그로 갱신).
+# URL 오버라이드: FASTLANE_REPO 환경변수.
+tooling:
+  fastlane_ref: "v0.2.13"
+  # 파생 앱의 CLI 활성화 핀 (P1-10):
+  #   dart pub global activate --source git \
+  #     --git-url https://github.com/raynear/boiler_plate.git \
+  #     --git-path tools/cli --git-ref <cli_ref>
+  # 템플릿 본체는 path 실행(./run) 유지. v* 태그는 배포 게이트라 cli-v* 네임스페이스 사용.
+  cli_ref: "cli-v1.0.0"
+  # 템플릿 버전 — scripts/sync-to-apps가 파생 앱의 template.lock에 기록.
+  # 릴리즈 시 CHANGELOG의 [Unreleased]를 버전 섹션으로 옮기고 template-v* 태그와 함께 갱신.
+  template_version: "template-v1.0.0"
+  # 로컬 패키지(app/packages/*) 릴리즈 핀 (P2-19d). 파생 앱이 utils 등을
+  # git 의존으로 소비할 때의 ref:
+  #   utils: {git: {url: <이 repo>, ref: <pkgs_ref>, path: app/packages/utils}}
+  pkgs_ref: "pkgs-v1.0.0"
+
+# ── 스토어 등록 정보 ──
+listing:
+  short_description: ""          # Max 80 chars (Google Play) / 30 chars (App Store subtitle)
+  keywords: []                   # Up to 100 chars for App Store, comma-separated
+  primary_locale: "en-US"        # Primary language
+  # 법적 문서 호스팅 방식 (generate-legal 산출물 docs/legal/ 배포처):
+  #   firebase: ./run deploy-legal → https://<projectId>.web.app/privacy_policy.html
+  #             (firebase-tools 설치 + firebase login 1회)
+  #   github:   ./run deploy-legal --target github → GitHub Pages
+  #             https://<owner>.github.io/<repo>/privacy_policy.html
+  #             (.github/workflows/legal-pages.yml, github_repository 필요;
+  #              private repo는 GitHub 유료 플랜에서만 Pages 동작)
+  legal_hosting: "firebase"      # firebase | github
+  # privacy_policy_url을 비워두면 gen_env가 legal_hosting 방식대로 URL을
+  # 도출해 앱에 주입합니다. 직접 호스팅한 URL이 있으면 여기에 명시하세요.
+  privacy_policy_url: ""
+  terms_of_service_url: ""       # 같은 호스트의 terms_of_service.html
+  apple_app_id: ""               # App Store 숫자 ID (예: 1234567890) — 강제 업데이트 스토어 링크
+  contact_email: ""
+  contact_website: ""            # 지원/소개 웹사이트 (Google Play contact_website.txt)
+  # support_url, marketing_url, copyright → app_config.yaml (프로젝트마다 동일)
+
+# ── AdMob (프로젝트별 고유, 수동 등록) ──
+# units: RELEASE 빌드용 실제 광고 단위 ID (시크릿 아님 — 앱 번들에 포함됨)
+#   debug/profile 빌드는 Google 테스트 ID가 자동 사용되고, 이 값들은 release 빌드에만 들어갑니다.
+#   비워두면 preflight가 release를 차단합니다. 값 수정 후 ./build (또는 ./run gen-env) 실행.
+admob:
+  ios_app_id: ""                 # ca-app-pub-xxx~yyy (Info.plist 주입)
+  android_app_id: ""             # ca-app-pub-xxx~yyy (AndroidManifest 주입)
+  units:
+    ios:
+      banner: ""                 # ca-app-pub-xxx/yyy
+      interstitial: ""
+      rewarded: ""
+      rewarded_interstitial: ""
+      native: ""
+      app_open: ""
+    android:
+      banner: ""
+      interstitial: ""
+      rewarded: ""
+      rewarded_interstitial: ""
+      native: ""
+      app_open: ""
+
+# ── Privacy Manifest (iOS) ──
+# ./run generate-privacy (init에 포함)가 app/ios/Runner/PrivacyInfo.xcprivacy를
+# 활성 기능 셋에서 생성합니다. 앱 고유 트래킹 도메인이 있으면 여기 추가하세요.
+# (AdMob/Firebase 등 SDK 도메인은 각 SDK의 매니페스트가 선언 — 여기 넣지 않음)
+privacy:
+  tracking_domains: []           # 예: ["track.example.com"]
+
+# ── 딥링크 (P2-23a) ──
+# isDeepLinkEnabled 플래그를 켜고 아래 값을 설정한 뒤 ./run generate-deeplink로
+# 네이티브 선언을 생성합니다(init에 포함). scheme=커스텀 스킴(Android intent-filter
+# + iOS CFBundleURLTypes), universal_links=유니버설/앱링크(autoVerify intent-filter +
+# iOS associated-domains + docs/legal/.well-known/ AASA·assetlinks).
+deep_link:
+  scheme: ""                     # 커스텀 스킴 (예: "myapp" → myapp://open/settings). 비우면 생성 스킵.
+  universal_links: []            # 유니버설/앱링크 도메인 (예: ["myapp.web.app"]). 비우면 생성 스킵.
+                                 # 호스팅·SHA-256은 별도(./run deploy-legal · Play 앱 서명 지문).
+
+# ── 앱 아이콘 생성 ──
+icon:
+  prompt: ""                     # DALL-E prompt for icon generation (leave empty to skip)
+  style: "modern"               # modern, minimal, playful, professional
+  background_color: "#FFFFFF"
+
+# ── IAP 상품 정의 ──
+# ./init 실행 시 metadata/in_app_purchases/ 파일이 자동 생성됩니다 (루트 기준).
+# id에 package_name이 자동 접두사로 붙습니다 (예: premium_monthly → premium_monthly.com.raynear.myapp)
+iap:
+  # 구독 화면 카피 (P1-15) — 비워두면 앱의 기본(번역 키) 카피 사용.
+  # 값에 '#' 문자는 넣지 말 것 (env 직렬화에서 주석으로 해석됨).
+  headline_copy: ""              # 예: "프리미엄으로 더 많이"
+  benefits_copy: ""              # 예: "광고 제거, 고급 분석, 무제한 사용"
+  subscriptions:
+    - group_id: "premium_group"
+      group_name:
+        ko: "프리미엄 구독"
+        en: "Premium Subscription"
+      products:
+        - id: "premium_monthly"
+          duration: P1M
+          name:
+            ko: "월간 프리미엄"
+            en: "Monthly Premium"
+          description:
+            ko: "매월 자동 갱신되는 프리미엄 구독"
+            en: "Monthly auto-renewing premium subscription"
+          price_tier: 5       # $4.99
+          free_trial: P7D     # 7일 무료 체험
+
+        - id: "premium_yearly"
+          duration: P1Y
+          name:
+            ko: "연간 프리미엄"
+            en: "Yearly Premium"
+          description:
+            ko: "연간 자동 갱신 (월간 대비 40% 할인)"
+            en: "Yearly auto-renewing premium (40% off monthly)"
+          price_tier: 30      # $29.99
+          free_trial: P7D
+
+  products:
+    - id: "premium_lifetime"
+      type: non_consumable
+      name:
+        ko: "평생 프리미엄"
+        en: "Lifetime Premium"
+      description:
+        ko: "모든 프리미엄 기능을 영구적으로 잠금 해제"
+        en: "Permanently unlock all premium features"
+      price_tier: 60          # $59.99

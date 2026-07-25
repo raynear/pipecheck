@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Rename CLI wrapper script
+# Usage: ./scripts/rename <새_프로젝트_이름> [options] (or ./rename via symlink)
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR/.."
+CLI_DIR="$PROJECT_ROOT/tools/cli"
+
+cd "$PROJECT_ROOT"
+dart run "$CLI_DIR/bin/rename.dart" "$@"

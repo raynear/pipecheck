@@ -1,0 +1,44 @@
+{
+  "productId": "premium_yearly.com.example.myapp",
+  "purchaseType": "subscription",
+  "defaultLanguage": "en-US",
+  "defaultPrice": {
+    "priceMicros": "29990000",
+    "currency": "USD"
+  },
+  "listings": {
+    "en-US": {
+      "title": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    "ko-KR": {
+      "title": "연간 프리미엄",
+      "description": "연간 자동 갱신 (월간 대비 40% 할인)"
+    },
+    "ja-JP": {
+      "title": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    "zh-CN": {
+      "title": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    "de-DE": {
+      "title": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    "fr-FR": {
+      "title": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    "ru-RU": {
+      "title": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    "pt-BR": {
+      "title": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    }
+  },
+  "subscriptionPeriod": "P1Y"
+}

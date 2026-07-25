@@ -1,0 +1,30 @@
+builders:
+  table_generator:
+    import: "package:boilerplate/data/table_generator/builder.dart"
+    builder_factories: ["tableGeneratorBuilder"]
+    build_extensions: 
+      ".dart":
+        - ".drift.dart"
+        - ".model.dart"
+        - ".sql"
+        - ".repository.dart"
+    auto_apply: dependents
+    build_to: source
+    defaults:
+      generate_for:
+        include:
+          - lib/data/definitions/*.dart
+    runs_before:
+      - freezed:freezed
+      - json_serializable:json_serializable
+      - drift_dev:drift
+
+targets:
+  $default:
+    builders:
+      boilerplate:table_generator:
+        enabled: true
+        options:
+          # 추가 옵션들
+          generate_providers: true
+          generate_tests: false

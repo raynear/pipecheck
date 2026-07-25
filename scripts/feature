@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Feature CLI wrapper script
+# Usage: ./scripts/feature <command> [options] (or ./feature via symlink)
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR/.."
+
+cd "$PROJECT_ROOT"
+dart run "tools/feature_cli/bin/feature.dart" "$@"

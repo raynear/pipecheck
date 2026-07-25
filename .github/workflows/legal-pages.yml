@@ -1,0 +1,49 @@
+# 법적 문서(개인정보처리방침·이용약관)를 GitHub Pages로 호스팅한다 (A1).
+#
+# generate-legal 산출물(docs/legal/)을 Pages 사이트 루트로 배포한다:
+#   https://<owner>.github.io/<repo>/privacy_policy.html
+#   https://<owner>.github.io/<repo>/terms_of_service.html
+#
+# 선행: `./run generate-legal`로 docs/legal/*.html 생성.
+# 트리거: docs/legal 변경 push 또는 수동 실행(./run deploy-legal --target github).
+# 주의: private repo의 Pages는 GitHub 유료 플랜에서만 동작한다(public이면 무료).
+name: Deploy legal pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/legal/**'
+      - '.github/workflows/legal-pages.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 동시 배포 1개만 — 진행 중 배포는 취소하지 않고 큐잉.
+concurrency:
+  group: legal-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          # 최초 1회 Pages 자동 활성화 (settings 수동 토글 불필요).
+          enablement: true
+      - name: Upload docs/legal artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/legal
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

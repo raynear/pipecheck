@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "public": "docs/legal",
+    "ignore": ["firebase.json", "**/.DS_Store"],
+    "headers": [
+      {
+        "source": "/.well-known/apple-app-site-association",
+        "headers": [{ "key": "Content-Type", "value": "application/json" }]
+      }
+    ]
+  }
+}

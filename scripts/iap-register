@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# IAP Register CLI wrapper script
+# Usage: ./scripts/iap-register [options] (or ./iap-register via symlink)
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR/.."
+CLI_DIR="$PROJECT_ROOT/tools/cli"
+
+cd "$PROJECT_ROOT"
+dart run "$CLI_DIR/bin/iap_register.dart" "$@"

@@ -1,0 +1,48 @@
+name: Fastlane Lane Contract
+
+# fastlane 레인 계약 CI (P1-12)
+# tools/cli·CI 워크플로우가 호출하는 레인이, project.yaml tooling.fastlane_ref로
+# 핀된 raynear/flutter-fastlane에 모두 존재하는지 PR마다 검증한다.
+# 계약 집합: scripts/check_lane_contract.rb
+
+on:
+  pull_request:
+    paths:
+      - "project.yaml"
+      - "tools/cli/**"
+      - "scripts/check_lane_contract.rb"
+      - ".github/workflows/lane-contract.yml"
+  workflow_dispatch:
+
+jobs:
+  lane-contract:
+    name: Lane contract (tools/cli ↔ flutter-fastlane)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Read fastlane ref pin
+        id: fastlane_ref
+        run: |
+          ref=$(grep -E '^[[:space:]]*fastlane_ref:' project.yaml | head -1 | sed -E 's/^[^:]*:[[:space:]]*"?([^"#]+[^"# ])"?.*$/\1/')
+          echo "ref=${ref:-main}" >> "$GITHUB_OUTPUT"
+
+      # raynear/flutter-fastlane은 public — token 불필요
+      - name: Check out fastlane repo
+        uses: actions/checkout@v4
+        with:
+          repository: raynear/flutter-fastlane
+          path: fastlane
+          ref: ${{ steps.fastlane_ref.outputs.ref }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: fastlane
+
+      - name: Verify lane contract
+        run: ruby scripts/check_lane_contract.rb fastlane

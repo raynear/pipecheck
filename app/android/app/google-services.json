@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "399340431068",
+    "project_id": "boilerplate-2024",
+    "storage_bucket": "boilerplate-2024.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:399340431068:android:377026f5a66e771f00b619",
+        "android_client_info": {
+          "package_name": "com.raynear.boilerplate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsb4T2lUk40rb93Z3oXFFoSedIEJBCUXI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:399340431068:android:377026f5a66e771f00b619",
+        "android_client_info": {
+          "package_name": "com.raynear.boilerplate.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsb4T2lUk40rb93Z3oXFFoSedIEJBCUXI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

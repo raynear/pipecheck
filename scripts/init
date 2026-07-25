@@ -1,0 +1,5 @@
+#!/bin/bash
+# 프로젝트 초기화 — ./run 위임 (부트스트랩 가드: dart pub get, fastlane 클론)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+exec "$PROJECT_ROOT/run" init "$@"

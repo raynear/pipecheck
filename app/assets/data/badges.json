@@ -1,0 +1,208 @@
+[
+	{
+		"id": "achievement_count_1",
+		"type": 0,
+		"title": "Beginner's Luck",
+		"achievementCondition": "First Achievement",
+		"description": "Achieve your first goal. A small start makes a big change!",
+		"iconPath": "assets/images/badges/first_achievement.png",
+		"condition": {
+			"count": 1
+		}
+	},
+	{
+		"id": "achievement_count_10",
+		"type": 0,
+		"title": "Master of Habits",
+		"achievementCondition": "Ten Achievements",
+		"description": "Move towards ten goals. Your effort becomes a habit!",
+		"iconPath": "assets/images/badges/10_achievements.png",
+		"condition": {
+			"count": 10
+		}
+	},
+	{
+		"id": "achievement_count_50",
+		"type": 0,
+		"title": "Goal Hunter",
+		"achievementCondition": "Fifty Achievements",
+		"description": "Achieve fifty goals. You have already made great achievements!",
+		"iconPath": "assets/images/badges/50_achievements.png",
+		"condition": {
+			"count": 50
+		}
+	},
+	{
+		"id": "achievement_count_100",
+		"type": 0,
+		"title": "Centurion",
+		"achievementCondition": "Hundred Achievements",
+		"description": "Achieve 100 goals! This is a moment when your perseverance and effort shine.",
+		"iconPath": "assets/images/badges/100_achievements.png",
+		"condition": {
+			"count": 100
+		}
+	},
+	{
+		"id": "achievement_count_365",
+		"type": 0,
+		"title": "One Year Journey",
+		"achievementCondition": "Year of Achievements",
+		"description": "You have achieved 365 goals. A year's effort has yielded amazing results!",
+		"iconPath": "assets/images/badges/365_achievements.png",
+		"condition": {
+			"count": 365
+		}
+	},
+	{
+		"id": "achievement_count_1000",
+		"type": 0,
+		"title": "Heavenly Mastery",
+		"achievementCondition": "Thousand Achievements",
+		"description": "Achieve 1000 goals! You are now a master of goal achievement.",
+		"iconPath": "assets/images/badges/1000_achievements.png",
+		"condition": {
+			"count": 1000
+		}
+	},
+	{
+		"id": "continuous_3days",
+		"type": 1,
+		"title": "Three-Day Miracle",
+		"achievementCondition": "Three Day Streak",
+		"description": "Achieve goals for three consecutive days! A good start for building habits.",
+		"iconPath": "assets/images/badges/3days_continuous.png",
+		"condition": {
+			"days": 3
+		}
+	},
+	{
+		"id": "continuous_7days",
+		"type": 1,
+		"title": "Victory of a Week",
+		"achievementCondition": "Week Long Streak",
+		"description": "Achieve goals for seven consecutive days! You have successfully finished a week.",
+		"iconPath": "assets/images/badges/7days_continuous.png",
+		"condition": {
+			"days": 7
+		}
+	},
+	{
+		"id": "continuous_30days",
+		"type": 1,
+		"title": "30-Day Miracle",
+		"achievementCondition": "Month Long Streak",
+		"description": "Achieve goals for 30 consecutive days! A month's effort has transformed you.",
+		"iconPath": "assets/images/badges/30days_continuous.png",
+		"condition": {
+			"days": 30
+		}
+	},
+	{
+		"id": "continuous_100days",
+		"type": 1,
+		"title": "Promise of 100 Days",
+		"achievementCondition": "Hundred Day Streak",
+		"description": "Achieve goals for 100 consecutive days! Your determination is impressive.",
+		"iconPath": "assets/images/badges/100days_continuous.png",
+		"condition": {
+			"days": 100
+		}
+	},
+	{
+		"id": "continuous_365days",
+		"type": 1,
+		"title": "Myth of 365 Days",
+		"achievementCondition": "Year Long Streak",
+		"description": "Achieve goals for 365 consecutive days! A year of persistence, truly amazing!",
+		"iconPath": "assets/images/badges/365days_continuous.png",
+		"condition": {
+			"days": 365
+		}
+	},
+	{
+		"id": "total_3days",
+		"type": 2,
+		"title": "Spark of Start",
+		"achievementCondition": "Three Total Days",
+		"description": "Achieve goals for a total of 3 days! A small spark makes a big fire.",
+		"iconPath": "assets/images/badges/3days_total.png",
+		"condition": {
+			"days": 3
+		}
+	},
+	{
+		"id": "total_7days",
+		"type": 2,
+		"title": "Passion of a Week",
+		"achievementCondition": "Week Total",
+		"description": "Achieve goals for a total of 7 days! Your passion shines throughout the week.",
+		"iconPath": "assets/images/badges/7days_total.png",
+		"condition": {
+			"days": 7
+		}
+	},
+	{
+		"id": "total_30days",
+		"type": 2,
+		"title": "One Month Journey",
+		"achievementCondition": "Month Total",
+		"description": "Achieve goals for a total of 30 days! A month's effort has borne fruit.",
+		"iconPath": "assets/images/badges/30days_total.png",
+		"condition": {
+			"days": 30
+		}
+	},
+	{
+		"id": "total_100days",
+		"type": 2,
+		"title": "Growth of 100 Days",
+		"achievementCondition": "Hundred Total Days",
+		"description": "Achieve goals for a total of 100 days! Reflect on how much you've grown.",
+		"iconPath": "assets/images/badges/100days_total.png",
+		"condition": {
+			"days": 100
+		}
+	},
+	{
+		"id": "total_365days",
+		"type": 2,
+		"title": "One Year of Change",
+		"achievementCondition": "Year Total",
+		"description": "Achieve goals for a total of 365 days! Compare yourself a year ago to who you are now.",
+		"iconPath": "assets/images/badges/365days_total.png",
+		"condition": {
+			"days": 365
+		}
+	},
+	{
+		"id": "first_identity",
+		"type": 3,
+		"title": "First Identity",
+		"achievementCondition": "First Identity",
+		"description": "Create your first identity. It's a new beginning of your journey.",
+		"iconPath": "assets/images/badges/first_identity.png",
+		"condition": {
+		}
+	},
+	{
+		"id": "first_habit_chain",
+		"type": 3,
+		"title": "First Habit Chain",
+		"achievementCondition": "First Habit Chain",
+		"description": "Create your first habit chain. It's a new beginning of your journey.",
+		"iconPath": "assets/images/badges/first_habit_chain.png",
+		"condition": {
+		}
+	},
+	{
+		"id": "first_share",
+		"type": 3,
+		"title": "First Share",
+		"achievementCondition": "First Share",
+		"description": "Share your achievement with others. It's a new beginning of your journey.",
+		"iconPath": "assets/images/badges/first_share.png",
+		"condition": {
+		}
+	}
+]

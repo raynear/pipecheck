@@ -1,0 +1,24 @@
+name: notifications_fcm
+description: Firebase Cloud Messaging 알림 엔진 (앱-무관, opt-in). 토큰/리스너/토픽 구독 + FCM 메시지용 로컬 알림 표시. firebase_messaging 의존.
+version: 0.0.1
+publish_to: 'none'
+resolution: workspace
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  utils:
+    path: ../utils
+  firebase_messaging: ^16.1.0
+  flutter_local_notifications: ^19.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0          # workspace 단일 해석 — app과 정렬 (P2-19c)
+
+flutter:

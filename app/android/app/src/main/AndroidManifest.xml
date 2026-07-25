@@ -1,0 +1,104 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application
+        android:label="@string/app_name"
+        android:name="${applicationName}"
+        android:icon="@mipmap/launcher_icon">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true" 
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme"
+                />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Google Mobile Ads -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3979736693761378~6253192084"/>
+        <property
+            android:name="android.adservices.AD_SERVICES_CONFIG"
+            android:resource="@xml/gma_ad_services_config"
+            tools:replace="android:resource" />
+        <!-- Google Mobile Ads -->
+
+        <!-- Google Maps: google_maps_flutter는 pubspec에서 비활성(주석) 상태다.
+             지도를 쓰는 포크는 여기에 meta-data(com.google.android.geo.API_KEY)를
+             추가하고 키는 리소스/시크릿으로 주입할 것 — 하드코딩 금지.
+             (하드코딩 placeholder 키 잔재 제거: 번들 유출/오과금 방지) -->
+
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+        <service 
+            android:name="com.f2fk.geofence_foreground_service.GeofenceForegroundService"
+            android:foregroundServiceType="location">
+        </service>
+    </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+
+    <!-- In-App Purchase permission -->
+    <uses-permission android:name="com.android.vending.BILLING"/>
+
+    <!-- Awesome Notification -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Awesome Notification -->
+
+    <!-- Local Auth -->
+    <!-- not used uses-permission android:name="android.permission.USE_BIOMETRIC"/-->
+    <!-- Local Auth -->
+
+    <!-- Audio Recorder -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Optional: Add this permission if you want to use bluetooth telephony device like headset/earbuds -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Optional: Add this permission if you want to save your recordings in public folders -->
+    <!-- duplicated uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /-->
+    <!-- Audio Recorder -->
+
+    <!-- Database -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <!-- Database -->
+
+    <uses-permission android:name="android.permission.CAMERA"/>
+
+    <!-- Default -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Default -->
+
+    <!--required-->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!--at least one of the following-->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+</manifest>

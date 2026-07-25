@@ -1,0 +1,33 @@
+# ============================================================
+# sync-manifest.yaml — 템플릿 → 파생 앱 동기화 파일 목록 (SSOT)
+# ============================================================
+# scripts/sync-to-apps 가 이 파일을 읽어 파생 앱으로 복사한다.
+#
+# 규칙:
+#   - path: 템플릿 루트 기준 상대경로. 실존하는 파일만 등록한다.
+#     (sync-to-apps 가 실행 시 실존 여부를 검증하고, 없으면 중단한다)
+#   - enabled: false 항목은 동기화에서 제외된다. reason 필수.
+#   - 동기화 대상을 추가/제거하려면 이 파일만 수정하면 된다.
+#
+# NOTE: fastlane/ 디렉토리는 별도 repo로 분리되어 각 앱에서 직접
+#       clone/pull 하므로 동기화 대상에 포함하지 않는다.
+
+files:
+  - path: scripts/build
+  - path: scripts/deploy
+  - path: scripts/feature
+  - path: scripts/generate-description
+  - path: scripts/generate-icon
+  - path: scripts/generate-legal
+  - path: scripts/iap-register
+  - path: scripts/init
+  - path: scripts/preflight
+  - path: scripts/rename
+  - path: scripts/screenshot
+  - path: scripts/test
+  - path: .github/workflows/qa-gate.yml
+  # P1-12에서 fastlane-split 수리 완료 (핀 checkout + P0-8 SSOT 경로) — enable
+  - path: .github/workflows/release-notes.yml
+  - path: scripts/generate_release_notes.py
+  - path: .github/workflows/lane-contract.yml
+  - path: scripts/check_lane_contract.rb

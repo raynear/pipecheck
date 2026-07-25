@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Pre-commit hook: Run flutter analyze before allowing commit
+# Only runs if dart/flutter files are staged
+#
+# Setup: cp tools/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+# Check if any dart files are staged
+STAGED_DART=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.dart$' || true)
+
+if [ -z "$STAGED_DART" ]; then
+    # No dart files staged, skip analyze
+    exit 0
+fi
+
+echo "🔍 Running flutter analyze..."
+
+cd app
+
+flutter analyze --no-fatal-infos
+RESULT=$?
+
+if [ $RESULT -ne 0 ]; then
+    echo ""
+    echo "❌ flutter analyze failed. Commit rejected."
+    echo "   Fix the issues above, then try again."
+    exit 1
+fi
+
+echo "✅ flutter analyze passed."
+exit 0

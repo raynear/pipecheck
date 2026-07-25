@@ -1,0 +1,23 @@
+name: positioning
+description: Geolocation/positioning engine (geolocator wrapper) for Flutter apps (app-agnostic, opt-in). 권한 + 현재 위치 + 위치 스트림.
+version: 0.0.1
+publish_to: 'none'
+resolution: workspace
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  utils:
+    path: ../utils
+  geolocator: ^14.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0          # workspace 단일 해석 — app과 정렬 (P2-19c)
+
+flutter:

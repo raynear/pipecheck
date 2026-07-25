@@ -1,0 +1,26 @@
+name: notifications
+description: Local notification engine (awesome_notifications scheduling/channels/permissions) for Flutter apps (app-agnostic). FCM은 포함하지 않는다.
+version: 0.0.1
+publish_to: 'none'
+resolution: workspace
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  utils:
+    path: ../utils
+  awesome_notifications: ^0.10.1
+  awesome_notifications_core: ^0.10.1
+  orange: ^1.2.8
+  timezone: ^0.10.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0          # workspace 단일 해석 — app과 정렬 (P2-19c)
+
+flutter:

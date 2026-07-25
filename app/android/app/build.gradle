@@ -1,0 +1,125 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.raynear.boilerplate"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        applicationId = "com.raynear.boilerplate"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+
+        multiDexEnabled = true
+    }
+
+    signingConfigs {
+        if (System.getenv("KEYSTORE_PATH") != null) {
+            release {
+                storeFile file(System.getenv("KEYSTORE_PATH"))
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // 서명: KEYSTORE_PATH가 있으면 release 서명. 없으면 디버그로
+            // 떨어지지만(아래 게이트 opt-out 시에만 도달), 기본은 release 조립
+            // 자체를 차단한다 — 디버그 서명 AAB는 Play가 거부하기 때문.
+            signingConfig System.getenv("KEYSTORE_PATH") != null ? signingConfigs.release : signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+
+            ndk {
+                debugSymbolLevel "SYMBOL_TABLE"
+            }
+        }
+        debug {
+            // 디버그 빌드는 기본 debug 서명 사용 및 별도 앱으로 설치
+            signingConfig signingConfigs.debug
+            applicationIdSuffix ".dev"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+    lint {
+        checkReleaseBuilds false
+        disable 'InvalidPackage'
+    }
+
+}
+
+// release 서명 게이트 (B2): KEYSTORE_PATH 없이 release 변종(bundleRelease/
+// assembleRelease)을 조립하면 디버그 서명 AAB가 만들어져 Play 콘솔이 거부한다.
+// 그래프에 release 조립 태스크가 있으면 빌드를 중단한다. 의도적 로컬 테스트는
+// ALLOW_DEBUG_RELEASE_SIGNING=true로 opt-out.
+if (System.getenv("KEYSTORE_PATH") == null
+        && !"true".equalsIgnoreCase(System.getenv("ALLOW_DEBUG_RELEASE_SIGNING"))) {
+    gradle.taskGraph.whenReady { graph ->
+        def releaseAssembly = graph.allTasks.find { t -> t.name ==~ /(bundle|assemble)Release.*/ }
+        if (releaseAssembly != null) {
+            throw new GradleException(
+                "Release 빌드에 Android 서명 키가 없습니다 (KEYSTORE_PATH 미설정).\n" +
+                "디버그 서명 AAB는 Play 콘솔이 거부합니다. 다음 중 하나로 해결하세요:\n" +
+                "  1) app_config.yaml의 signing.android.keystore_path 설정 후 ./init\n" +
+                "     (또는 ./run gen-env)로 KEYSTORE_PATH 등 서명 환경변수 주입\n" +
+                "  2) 의도적 로컬 테스트면 ALLOW_DEBUG_RELEASE_SIGNING=true 설정")
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+// START: FlutterFire Configuration
+// google-services.json에 현재 applicationId(.dev 포함) 클라이언트가 있을 때만 적용.
+// 하드 적용하면 fork 직후(rename됨, Firebase 미설정) 모든 빌드가 죽는다 —
+// ./init의 Firebase 단계(flutterfire configure)가 json을 재생성하면 자동으로 다시 적용됨.
+def googleServicesFile = file("google-services.json")
+def googleServicesMatches = false
+if (googleServicesFile.exists()) {
+    def gsText = googleServicesFile.text
+    def appId = android.defaultConfig.applicationId
+    googleServicesMatches =
+        gsText.contains("\"${appId}\"") && gsText.contains("\"${appId}.dev\"")
+}
+if (googleServicesMatches) {
+    apply plugin: "com.google.gms.google-services"
+    apply plugin: "com.google.firebase.crashlytics"
+} else {
+    logger.lifecycle("google-services.json 없음/불일치 — Firebase Gradle 플러그인 건너뜀 (./init의 Firebase 단계로 재생성 가능)")
+}
+// END: FlutterFire Configuration
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    implementation "androidx.core:core-ktx:1.13.1"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.4"
+    implementation "androidx.appcompat:appcompat:1.7.0"
+}

@@ -1,0 +1,21 @@
+# Pub workspace 루트 (P2-19c) — 패키지 해석 컨테이너.
+# 멤버: 앱(app) + 로컬 패키지(app/packages/*). 단일 lock으로 공유 해석.
+# tools/cli·tools/feature_cli는 독립 Dart 프로젝트라 멤버가 아니다.
+# 이 파일은 실제 패키지가 아니라 workspace 선언 전용이다(앱 정체성 무관 — fork 시 rename 대상 아님).
+name: app_workspace
+publish_to: none
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+workspace:
+  - app
+  - app/packages/utils
+  - app/packages/authentication
+  - app/packages/biometric_auth
+  - app/packages/ab_testing
+  - app/packages/firebase_services
+  - app/packages/ads
+  - app/packages/notifications
+  - app/packages/notifications_fcm
+  - app/packages/positioning

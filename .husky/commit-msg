@@ -1,0 +1,50 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Commit message hook for Flutter BoilerPlate
+# 커밋 메시지 형식을 검증합니다.
+
+# 커밋 메시지 파일
+commit_msg_file="$1"
+commit_msg=$(cat "$commit_msg_file")
+
+# Conventional Commits 패턴 검증
+# 형식: <type>(<scope>): <description>
+# 예: feat(auth): 로그인 기능 추가
+pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?: .{1,100}$"
+
+# 머지 커밋은 검증하지 않음
+if echo "$commit_msg" | grep -q "^Merge"; then
+  exit 0
+fi
+
+# 첫 번째 줄만 검증 (제목)
+first_line=$(echo "$commit_msg" | head -n 1)
+
+if ! echo "$first_line" | grep -qE "$pattern"; then
+  echo ""
+  echo "[ERROR] 커밋 메시지 형식이 올바르지 않습니다."
+  echo ""
+  echo "올바른 형식:"
+  echo "  <type>(<scope>): <description>"
+  echo ""
+  echo "type 목록:"
+  echo "  feat     - 새로운 기능 추가"
+  echo "  fix      - 버그 수정"
+  echo "  docs     - 문서 변경"
+  echo "  style    - 코드 스타일 변경 (포맷팅 등)"
+  echo "  refactor - 코드 리팩토링"
+  echo "  perf     - 성능 개선"
+  echo "  test     - 테스트 추가/수정"
+  echo "  build    - 빌드 시스템 변경"
+  echo "  ci       - CI 설정 변경"
+  echo "  chore    - 기타 변경"
+  echo "  revert   - 커밋 되돌리기"
+  echo ""
+  echo "예시:"
+  echo "  feat(auth): 로그인 기능 추가"
+  echo "  fix(ui): 버튼 클릭 버그 수정"
+  echo "  docs: README 업데이트"
+  echo ""
+  exit 1
+fi

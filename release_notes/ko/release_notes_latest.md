@@ -1,0 +1,2 @@
+- 첫 출시입니다.
+- Flutter BoilerPlate 템플릿으로 제작되었습니다.

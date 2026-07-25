@@ -1,0 +1,101 @@
+# ============================================
+# App Configuration (보일러플레이트 공통 설정)
+# ============================================
+# 프로젝트 간 재사용 가능한 인프라/서비스 설정입니다.
+# 프로젝트별 고유 설정은 project.yaml을 참고하세요.
+
+company_name: "RaynearSoft"
+
+platforms:
+  ios:
+    team_id: "582QW569QX"               # Apple Developer Team ID (10자)
+    deployment_target: "15.0"
+  android:
+    min_sdk: 24
+    target_sdk: 35
+
+# App profile preset (sets feature flags automatically)
+# minimal: Auth + Local DB only
+# standard: + Firebase + Analytics + Crashlytics
+# premium: + Ads + IAP + Push + A/B Testing
+# enterprise: All features enabled
+profile: "standard"
+
+# Override individual features (takes precedence over profile)
+features:
+  # force_update: true
+  # maintenance_mode: true   # RC maintenance_mode로 앱 전체 차단 (P2-23b, firebase 필요)
+  # privacy_consent: true
+  # network_monitoring: true
+  # data_export: true        # GDPR 데이터 내보내기 (P2-23f, 로컬 Drift → JSON, 기본 ON)
+  # deep_link: false
+
+services:
+  firebase:
+    enabled: true
+    service_account_file: "~/serviceAccount.json"       # Firebase Admin SDK 서비스 계정 (Firebase 콘솔 → 프로젝트 설정 → 서비스 계정)
+    service_account_email: "" # GCP 서비스 계정 이메일 (IAM 역할 자동 부여용, 비워두면 JSON에서 추출)
+    tester_groups: "qa-testers"                    # Firebase App Distribution 테스터 그룹명
+    testers: "raynear@gmail.com"                                    # 개별 테스터 이메일 (콤마 구분, 예: "a@test.com,b@test.com")
+  # (supabase 스키마는 P1-16.5a에서 철거 — 백엔드 전환: Firebase Auth +
+  #  local-only Drift, docs/MODULES.md §5)
+
+monetization:
+  ads:
+    enabled: true
+  subscription:
+    enabled: true
+
+store:
+  apple:
+    apple_id: "raynear@gmail.com"
+    api_key_id: "LKLHCNV497"
+    api_issuer_id: "56b2cd7d-c183-4fbd-b7ce-38e43164dbae"
+    api_key_file: "~/AuthKey_LKLHCNV497.p8"
+    # IAP/구독 가격 기준 통화·국가 (생략 시 USD/USA — fastlane ios.rb 소비)
+    iap_base_currency: "USD"
+    iap_base_territory: "USA"
+  google:
+    json_key_file: "~/serviceAccount.json"              # Google Play Console API 서비스 계정 키 (Play Console → 설정 → API 액세스)
+
+  metadata:
+    support_url: "https://raynear.xyz"
+    marketing_url: "https://raynear.xyz"
+    copyright: "2026 RaynearSoft. All rights reserved."
+    app_review:
+      first_name: "Byungkuk"
+      last_name: "Noh"
+      phone: "+82 10 4693 5097"
+      email: "raynear@gmail.com"
+      demo_user: ""          # 로그인 있는 앱만 — 앱별로 .env(REVIEW_DEMO_USER)에 넣는 것 권장
+      demo_password: ""      # 〃 (REVIEW_DEMO_PASSWORD)
+      notes: ""
+    trade_representative:        # 한국 앱스토어 필수, 앱마다 동일
+      first_name: "Byungkuk"
+      last_name: "Noh"
+      phone: "+82 10 4693 5097"
+      email: "raynear@gmail.com"
+      address: "Gyeonggi-do, Yongin-si"
+      city: "Yongin-si"
+      country: "KOR"
+
+signing:
+  ios:
+    match_git_url: "https://github.com/raynear/cert.git"
+    match_type: "appstore"
+  android:
+    keystore_path: "~/key.jks"
+    key_alias: "android_signing_key"
+
+notifications:
+  discord:
+    webhook_url: ""              # Discord 채널 Webhook URL
+
+defaults:
+  skip_screenshots: true
+  ci:
+    enforce_coverage: false
+    auto_commit_changelog: false
+  testing:
+    run_android_emulator_tests: false
+    setup_adhoc_certs: false

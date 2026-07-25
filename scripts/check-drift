@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# ============================================================
+# Boilerplate vs App CI/Config Drift 감지
+# ============================================================
+# 사용법: ./scripts/check-drift [--app kanken|hanja|snapdic|flowmodoro] [--verbose]
+#
+# boilerplate의 공통 파일과 앱 프로젝트의 동일 파일을 비교하여
+# 동기화가 깨진(drift) 파일을 감지합니다.
+# 종료 코드: 0 = drift 없음, 1 = drift 감지됨
+# ============================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BP_ROOT="$(dirname "$SCRIPT_DIR")"
+
+APP_NAMES="kanken hanja snapdic flowmodoro"
+
+get_app_path() {
+  echo "$HOME/Project/$1"
+}
+
+# sync-to-apps와 동일한 대상 파일 목록
+# fastlane/ 은 별도 repo로 분리되어 여기서는 drift 감지 대상에서 제외됩니다.
+SYNC_FILES="
+scripts/build
+scripts/deploy
+scripts/feature
+scripts/generate-description
+scripts/generate-icon
+scripts/generate-legal
+scripts/iap-register
+scripts/init
+scripts/preflight
+scripts/rename
+scripts/screenshot
+scripts/test
+.github/workflows/qa-gate.yml
+"
+
+VERBOSE=false
+TARGET_APP=""
+DRIFT_COUNT=0
+MISSING_COUNT=0
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --verbose|-v)
+      VERBOSE=true
+      shift
+      ;;
+    --app)
+      TARGET_APP="$2"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: $0 [--app kanken|hanja|snapdic|flowmodoro] [--verbose]"
+      echo ""
+      echo "Detects drift between boilerplate sync files and app copies."
+      echo "Exit code 0 = no drift, 1 = drift detected."
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
+
+if [ -n "$TARGET_APP" ]; then
+  valid=false
+  for name in $APP_NAMES; do
+    if [ "$name" = "$TARGET_APP" ]; then
+      valid=true
+      break
+    fi
+  done
+  if [ "$valid" = false ]; then
+    echo "Error: Unknown app '$TARGET_APP'"
+    echo "Available: $APP_NAMES"
+    exit 1
+  fi
+  APPS="$TARGET_APP"
+else
+  APPS="$APP_NAMES"
+fi
+
+echo "============================================"
+echo "Boilerplate Drift Check"
+echo "============================================"
+echo ""
+
+for app in $APPS; do
+  app_path="$(get_app_path "$app")"
+
+  if [ ! -d "$app_path" ]; then
+    echo "[$app] SKIP -- directory not found: $app_path"
+    continue
+  fi
+
+  app_drift=0
+  app_missing=0
+
+  for rel_path in $SYNC_FILES; do
+    src="$BP_ROOT/$rel_path"
+    dst="$app_path/$rel_path"
+
+    if [ ! -f "$src" ]; then
+      continue
+    fi
+
+    if [ ! -f "$dst" ]; then
+      echo "[$app] MISSING: $rel_path"
+      app_missing=$((app_missing + 1))
+      MISSING_COUNT=$((MISSING_COUNT + 1))
+      continue
+    fi
+
+    if ! diff -q "$src" "$dst" > /dev/null 2>&1; then
+      echo "[$app] DRIFT: $rel_path"
+      if [ "$VERBOSE" = true ]; then
+        diff --unified=3 "$src" "$dst" 2>/dev/null | head -30
+        echo "  ..."
+        echo ""
+      fi
+      app_drift=$((app_drift + 1))
+      DRIFT_COUNT=$((DRIFT_COUNT + 1))
+    fi
+  done
+
+  if [ $app_drift -eq 0 ] && [ $app_missing -eq 0 ]; then
+    echo "[$app] OK -- all files in sync"
+  else
+    echo "[$app] ${app_drift} drifted, ${app_missing} missing"
+  fi
+  echo ""
+done
+
+echo "============================================"
+echo "Summary: ${DRIFT_COUNT} drifted, ${MISSING_COUNT} missing"
+if [ $DRIFT_COUNT -eq 0 ] && [ $MISSING_COUNT -eq 0 ]; then
+  echo "Status: ALL IN SYNC"
+  exit 0
+else
+  echo "Status: DRIFT DETECTED"
+  echo "Fix: ./scripts/sync-to-apps"
+  exit 1
+fi

@@ -1,0 +1,34 @@
+{
+  "name": "flutter-boilerplate",
+  "version": "1.0.0",
+  "description": "Flutter BoilerPlate - 4주 안에 앱 출시를 위한 프로젝트 템플릿",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "lint": "cd app && flutter analyze",
+    "format": "cd app && dart format .",
+    "format:check": "cd app && dart format --set-exit-if-changed .",
+    "test": "cd app && flutter test",
+    "build": "cd app && flutter pub run build_runner build --delete-conflicting-outputs"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0"
+  },
+  "lint-staged": {
+    "app/lib/**/*.dart": [
+      "dart format --fix",
+      "dart analyze"
+    ],
+    "app/test/**/*.dart": [
+      "dart format --fix"
+    ],
+    "tools/cli/**/*.dart": [
+      "dart format --fix",
+      "dart analyze"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

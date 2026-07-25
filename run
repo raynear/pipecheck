@@ -1,0 +1,12 @@
+#!/bin/bash
+# Flutter BoilerPlate CLI 런처 — 디스패치/부트스트랩 본체는 tools/cli/bin/bp.dart (P1-10)
+# 파생 앱은 pub global activate된 `bp`를 직접 써도 동일하다.
+set -e
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI="$ROOT/tools/cli"
+if [ ! -f "$CLI/.dart_tool/package_config.json" ] || [ "$CLI/pubspec.yaml" -nt "$CLI/.dart_tool/package_config.json" ]; then
+  echo "[run] tools/cli 의존성 설치 (dart pub get)"
+  (cd "$CLI" && dart pub get >/dev/null)
+fi
+cd "$ROOT"
+exec dart run "$CLI/bin/bp.dart" "$@"

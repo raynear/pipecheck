@@ -1,0 +1,55 @@
+# This file configures the analyzer, which statically analyzes Dart code to
+# check for errors, warnings, and lints.
+#
+# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
+# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
+# invoked from the command line by running `flutter analyze`.
+
+# The following line activates a set of recommended lints for Flutter apps,
+# packages, and plugins designed to encourage good coding practices.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    prefer_const_constructors_in_immutables: ignore
+    invalid_annotation_target: ignore
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.drift.dart"
+    - "lib/data/generated/**"
+    - "lib/data/table_generator/**"
+    # path-dep 패키지는 자체 분석 컨텍스트 보유 — 앱 analyze가 이들의
+    # test/example까지 훑으면 fresh checkout에서 패키지 내부 이슈로
+    # qa-gate가 죽는다 (P0-9). 패키지 정리는 P1-16/P2-20 로드맵.
+    - "packages/**"
+
+linter:
+  # The lint rules applied to this project can be customized in the
+  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
+  # included above or to enable additional rules. A list of all available lints
+  # and their documentation is published at https://dart.dev/lints.
+  #
+  # Instead of disabling a lint rule for the entire project in the
+  # section below, it can also be suppressed for a single line of code
+  # or a specific dart file by using the `// ignore: name_of_lint` and
+  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
+  # producing the lint.
+  rules:
+    # avoid_print: false
+    prefer_const_constructors_in_immutables: false
+    prefer_single_quotes: true
+    camel_case_types: true # Types should use UpperCamelCase.
+    camel_case_extensions: true # Extensions should use UpperCamelCase.
+    file_names: true # Files should use lowercase_with_underscores.
+    package_names: true # Packages should use lowercase_with_underscores.
+    library_prefixes: true # Import prefixes should use lowercase_with_underscores.
+    non_constant_identifier_names: true # Other identifiers should use lowerCamelCase.
+    constant_identifier_names: true # Constants should use lowerCamelCase.
+    directives_ordering: true # Directives should follow a specific order.
+    lines_longer_than_80_chars: false # Avoid lines longer than 80 characters.
+    curly_braces_in_flow_control_structures: true # Use curly braces for all flow control statements.
+    no_adjacent_strings_in_list: true
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options

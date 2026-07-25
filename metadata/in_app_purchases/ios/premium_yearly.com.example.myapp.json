@@ -1,0 +1,52 @@
+{
+  "product_id": "premium_yearly.com.example.myapp",
+  "type": "auto_renewable_subscription",
+  "reference_name": "premium_yearly.com.example.myapp",
+  "pricing": {
+    "tier": 30
+  },
+  "localizations": [
+    {
+      "locale": "en-US",
+      "name": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    {
+      "locale": "ko-KR",
+      "name": "연간 프리미엄",
+      "description": "연간 자동 갱신 (월간 대비 40% 할인)"
+    },
+    {
+      "locale": "ja-JP",
+      "name": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    {
+      "locale": "zh-CN",
+      "name": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    {
+      "locale": "de-DE",
+      "name": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    {
+      "locale": "fr-FR",
+      "name": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    {
+      "locale": "ru-RU",
+      "name": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    },
+    {
+      "locale": "pt-BR",
+      "name": "Yearly Premium",
+      "description": "Yearly auto-renewing premium (40% off monthly)"
+    }
+  ],
+  "subscription_duration": "P1Y",
+  "subscription_family_sharable": false
+}

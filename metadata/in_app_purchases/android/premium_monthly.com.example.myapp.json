@@ -1,0 +1,44 @@
+{
+  "productId": "premium_monthly.com.example.myapp",
+  "purchaseType": "subscription",
+  "defaultLanguage": "en-US",
+  "defaultPrice": {
+    "priceMicros": "4990000",
+    "currency": "USD"
+  },
+  "listings": {
+    "en-US": {
+      "title": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    "ko-KR": {
+      "title": "월간 프리미엄",
+      "description": "매월 자동 갱신되는 프리미엄 구독"
+    },
+    "ja-JP": {
+      "title": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    "zh-CN": {
+      "title": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    "de-DE": {
+      "title": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    "fr-FR": {
+      "title": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    "ru-RU": {
+      "title": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    "pt-BR": {
+      "title": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    }
+  },
+  "subscriptionPeriod": "P1M"
+}

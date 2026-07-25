@@ -1,0 +1,21 @@
+# flutter pub run flutter_launcher_icons
+flutter_launcher_icons:
+  # 아이콘 소스 SSOT (P0-8): 앱 이름과 무관한 고정 경로 — rename에 안전
+  image_path: "assets/launcher_icon/icon.png"
+
+  android: "launcher_icon"
+  # image_path_android: "assets/launcher_icon/icon.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  # adaptive_icon_background: "assets/launcher_icon/background.png"
+  # adaptive_icon_foreground: "assets/launcher_icon/foreground.png"
+  # adaptive_icon_monochrome: "assets/launcher_icon/monochrome.png"
+
+  ios: true
+  # image_path_ios: "assets/launcher_icon/icon.png"
+  # App Store는 알파 채널이 있는 1024 마케팅 아이콘을 거부한다. 패키지가
+  # 인식하는 키는 `remove_alpha_ios`다 (`remove_alpha_channel_ios`는 무시됨).
+  remove_alpha_ios: true
+  # image_path_ios_dark_transparent: "assets/icon/icon_dark.png"
+  # image_path_ios_tinted_grayscale: "assets/icon/icon_tinted.png"
+  # desaturate_tinted_to_grayscale_ios: true
+

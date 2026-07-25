@@ -1,0 +1,50 @@
+{
+  "product_id": "premium_lifetime.com.example.myapp",
+  "type": "non_consumable",
+  "reference_name": "premium_lifetime.com.example.myapp",
+  "pricing": {
+    "tier": 60
+  },
+  "localizations": [
+    {
+      "locale": "en-US",
+      "name": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    {
+      "locale": "ko-KR",
+      "name": "평생 프리미엄",
+      "description": "모든 프리미엄 기능을 영구적으로 잠금 해제"
+    },
+    {
+      "locale": "ja-JP",
+      "name": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    {
+      "locale": "zh-CN",
+      "name": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    {
+      "locale": "de-DE",
+      "name": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    {
+      "locale": "fr-FR",
+      "name": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    {
+      "locale": "ru-RU",
+      "name": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    {
+      "locale": "pt-BR",
+      "name": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+name: Generate Release Notes
+
+# fastlane-split 수리 완료 (P1-12):
+#   1. project.yaml tooling.fastlane_ref 핀으로 raynear/flutter-fastlane 을 checkout 하고
+#      (public repo — token 불필요)
+#   2. fastlane/release_notes_config.json 을 읽어
+#   3. <root>/metadata/{ios,android}/... 에 릴리즈 노트를 생성한 뒤 (P0-8 경로 계약 SSOT)
+#   4. 이 변경을 프로젝트 repo 에 PR 로 올린다
+#      (fastlane/ 은 .gitignore 라 PR 에 섞이지 않음. metadata 가 루트 SSOT 이므로
+#       fastlane repo 쪽 PR 은 불필요)
+
+on:
+  workflow_run:
+    workflows: ["App Store / Google Play Deploy"]
+    types:
+      - completed
+
+jobs:
+  generate-release-notes:
+    # ci.yml이 성공하고, v* 태그로 트리거된 경우에만 실행
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Read fastlane ref pin
+        id: fastlane_ref
+        run: |
+          ref=$(grep -E '^[[:space:]]*fastlane_ref:' project.yaml | head -1 | sed -E 's/^[^:]*:[[:space:]]*"?([^"#]+[^"# ])"?.*$/\1/')
+          echo "ref=${ref:-main}" >> "$GITHUB_OUTPUT"
+
+      # release_notes_config.json 은 fastlane repo 에 있다 (public — token 불필요)
+      - name: Check out fastlane repo
+        uses: actions/checkout@v4
+        with:
+          repository: raynear/flutter-fastlane
+          path: fastlane
+          ref: ${{ steps.fastlane_ref.outputs.ref }}
+
+      - name: Extract version info
+        id: version
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          TAG="$HEAD_BRANCH"
+          VERSION="${TAG#v}"
+          BUILD_NUMBER=$(grep 'version:' app/pubspec.yaml | head -1 | sed 's/.*+//')
+          # --match: template-v* / cli-v* 릴리즈 태그는 제외하고 배포 태그(v*)만 비교 대상
+          PREV_TAG=$(git describe --tags --match 'v[0-9]*' --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes
+        id: generate
+        env:
+          PREV_TAG: ${{ steps.version.outputs.prev_tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: |
+          python3 scripts/generate_release_notes.py \
+            --prev-tag "$PREV_TAG" \
+            --version "$VERSION" \
+            --build-number "$BUILD_NUMBER" \
+            --app-config fastlane/release_notes_config.json
+
+      - name: Create PR with release notes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: release-notes/${{ steps.version.outputs.tag }}
+          title: "[Release Notes] ${{ steps.version.outputs.tag }}"
+          body: |
+            자동 생성된 릴리즈 노트입니다.
+            - 버전: ${{ steps.version.outputs.version }}
+            - 빌드: ${{ steps.version.outputs.build_number }}
+            - 이전 태그: ${{ steps.version.outputs.prev_tag }}
+            - 로캘: ${{ steps.generate.outputs.locales }}
+            - 커버리지: ${{ steps.generate.outputs.coverage }}%
+            - 생성 파일 수: ${{ steps.generate.outputs.files_written }}
+
+            ✅ **CI 빌드 성공 확인 후 생성됨** — 이 PR은 ci.yml 워크플로우가 성공한 후에만 생성됩니다.
+
+            ${{ steps.generate.outputs.unmatched_count != '0' && format('⚠️ **수동 검토 필요 커밋 ({0}건)**:', steps.generate.outputs.unmatched_count) || '' }}
+            ${{ steps.generate.outputs.unmatched_commits }}
+
+            승인 후 fastlane metadata 업로드가 필요합니다.
+          commit-message: "docs: release notes for ${{ steps.version.outputs.tag }}"
+          delete-branch: true

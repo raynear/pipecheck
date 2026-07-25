@@ -1,0 +1,81 @@
+{
+  "app": "My App",
+  "generator": "boilerplate_cli generate-data-safety (P1-13f)",
+  "dataDeletionPath": null,
+  "entries": [
+    {
+      "category": "Device or other IDs",
+      "dataType": "Device or other IDs (advertising ID)",
+      "collected": true,
+      "shared": true,
+      "purposes": [
+        "Advertising or marketing"
+      ],
+      "source": "AdMob (isAdsEnabled)",
+      "optional": false,
+      "appleNutritionLabel": "Identifiers → Device ID (Used to Track You)"
+    },
+    {
+      "category": "App activity",
+      "dataType": "App interactions",
+      "collected": true,
+      "shared": false,
+      "purposes": [
+        "Analytics"
+      ],
+      "source": "Firebase Analytics (isFirebaseAnalyticsEnabled)",
+      "optional": true,
+      "appleNutritionLabel": "Usage Data → Product Interaction"
+    },
+    {
+      "category": "Device or other IDs",
+      "dataType": "Device or other IDs (app instance ID)",
+      "collected": true,
+      "shared": false,
+      "purposes": [
+        "Analytics"
+      ],
+      "source": "Firebase Analytics (isFirebaseAnalyticsEnabled)",
+      "optional": true,
+      "appleNutritionLabel": "Identifiers → Device ID"
+    },
+    {
+      "category": "App info and performance",
+      "dataType": "Crash logs",
+      "collected": true,
+      "shared": false,
+      "purposes": [
+        "Analytics",
+        "App functionality"
+      ],
+      "source": "Firebase Crashlytics (isFirebaseCrashlyticsEnabled)",
+      "optional": false,
+      "appleNutritionLabel": "Diagnostics → Crash Data"
+    },
+    {
+      "category": "App info and performance",
+      "dataType": "Diagnostics",
+      "collected": true,
+      "shared": false,
+      "purposes": [
+        "Analytics",
+        "App functionality"
+      ],
+      "source": "Firebase Crashlytics (isFirebaseCrashlyticsEnabled)",
+      "optional": false,
+      "appleNutritionLabel": "Diagnostics → Performance Data"
+    },
+    {
+      "category": "Financial info",
+      "dataType": "Purchase history",
+      "collected": true,
+      "shared": false,
+      "purposes": [
+        "App functionality"
+      ],
+      "source": "IAP/Subscription (isSubscriptionEnabled)",
+      "optional": false,
+      "appleNutritionLabel": "Purchases → Purchase History"
+    }
+  ]
+}

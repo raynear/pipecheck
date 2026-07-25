@@ -1,0 +1,26 @@
+name: boilerplate_cli
+description: Flutter BoilerPlate CLI Tools - Command Pattern 기반 CLI 도구 모음
+version: 1.0.0
+publish_to: none
+
+# P1-10: 파생 앱은 git source로 활성화 (pub.dev 발행 불필요 — publish_to: none 유지)
+#   dart pub global activate --source git \
+#     --git-url https://github.com/raynear/boiler_plate.git \
+#     --git-path tools/cli --git-ref <project.yaml tooling.cli_ref>
+executables:
+  bp: bp
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  args: ^2.5.0
+  path: ^1.9.1
+  io: ^1.0.4
+  cli_util: ^0.4.1
+  yaml: ^3.1.2
+  crypto: ^3.0.3
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0

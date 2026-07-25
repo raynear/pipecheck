@@ -1,0 +1,12 @@
+{
+  "locales": [
+    "en-US.json",
+    "ko-KR.json",
+    "ja-JP.json",
+    "zh-CN.json",
+    "de-DE.json",
+    "fr-FR.json",
+    "ru-RU.json",
+    "pt-BR.json"
+  ]
+}

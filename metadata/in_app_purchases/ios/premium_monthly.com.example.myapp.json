@@ -1,0 +1,52 @@
+{
+  "product_id": "premium_monthly.com.example.myapp",
+  "type": "auto_renewable_subscription",
+  "reference_name": "premium_monthly.com.example.myapp",
+  "pricing": {
+    "tier": 5
+  },
+  "localizations": [
+    {
+      "locale": "en-US",
+      "name": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    {
+      "locale": "ko-KR",
+      "name": "월간 프리미엄",
+      "description": "매월 자동 갱신되는 프리미엄 구독"
+    },
+    {
+      "locale": "ja-JP",
+      "name": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    {
+      "locale": "zh-CN",
+      "name": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    {
+      "locale": "de-DE",
+      "name": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    {
+      "locale": "fr-FR",
+      "name": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    {
+      "locale": "ru-RU",
+      "name": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    },
+    {
+      "locale": "pt-BR",
+      "name": "Monthly Premium",
+      "description": "Monthly auto-renewing premium subscription"
+    }
+  ],
+  "subscription_duration": "P1M",
+  "subscription_family_sharable": false
+}

@@ -1,0 +1,256 @@
+name: Firebase App Distribution
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "배포 플랫폼"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - android
+          - ios
+
+jobs:
+  # ============================================
+  # TEST GATE
+  # ============================================
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Create secrets file (root .env)
+        run: |
+          echo "$DOTENV" > .env
+        env:
+          DOTENV: ${{ secrets.DOTENV }}
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Generate runtime env artifacts
+        run: |
+          (cd tools/cli && dart pub get)
+          dart run tools/cli/bin/gen_env.dart
+
+      - name: Get Dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Run Code Generation
+        working-directory: app
+        run: ./build.sh
+
+      - name: Run Analyzer
+        working-directory: app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Tests
+        working-directory: app
+        run: flutter test test/unit/
+
+  # ============================================
+  # ANDROID - Firebase App Distribution
+  # ============================================
+  android_distribute:
+    needs: test
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'both' || github.event.inputs.platform == 'android'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Read fastlane ref pin
+        id: fastlane_ref
+        run: |
+          ref=$(grep -E '^[[:space:]]*fastlane_ref:' project.yaml | head -1 | sed -E 's/^[^:]*:[[:space:]]*"?([^"#]+[^"# ])"?.*$/\1/')
+          echo "ref=${ref:-main}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out fastlane repo
+        uses: actions/checkout@v4
+        with:
+          repository: raynear/flutter-fastlane
+          path: fastlane
+          ref: ${{ steps.fastlane_ref.outputs.ref }}
+          token: ${{ secrets.FASTLANE_REPO_TOKEN }}
+
+      - name: Create secrets file (root .env)
+        run: |
+          echo "$DOTENV" > .env
+        env:
+          DOTENV: ${{ secrets.DOTENV }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: fastlane
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Generate runtime env artifacts
+        run: |
+          (cd tools/cli && dart pub get)
+          dart run tools/cli/bin/gen_env.dart
+
+      - name: Set up Android keystore
+        run: |
+          echo "$ANDROID_KEYSTORE" | base64 --decode > app/android/app/release.keystore
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+
+      - name: Get Dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Run Code Generation
+        working-directory: app
+        run: ./build.sh
+
+      - name: Decode Firebase Service Account
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 --decode > fastlane/firebase-service-account.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+
+      - name: Distribute Android to Firebase
+        working-directory: fastlane
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/app/android/app/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          BUILD_NUMBER: ${{ github.run_number }}
+          FIREBASE_SERVICE_CREDENTIALS_FILE: ${{ github.workspace }}/fastlane/firebase-service-account.json
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          bundle exec fastlane distribute_android
+
+  # ============================================
+  # iOS - Firebase App Distribution
+  # ============================================
+  ios_distribute:
+    needs: test
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'both' || github.event.inputs.platform == 'ios'))
+    runs-on: macos-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Read fastlane ref pin
+        id: fastlane_ref
+        run: |
+          ref=$(grep -E '^[[:space:]]*fastlane_ref:' project.yaml | head -1 | sed -E 's/^[^:]*:[[:space:]]*"?([^"#]+[^"# ])"?.*$/\1/')
+          echo "ref=${ref:-main}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out fastlane repo
+        uses: actions/checkout@v4
+        with:
+          repository: raynear/flutter-fastlane
+          path: fastlane
+          ref: ${{ steps.fastlane_ref.outputs.ref }}
+          token: ${{ secrets.FASTLANE_REPO_TOKEN }}
+
+      - name: Create secrets file (root .env)
+        run: |
+          echo "$DOTENV" > .env
+        env:
+          DOTENV: ${{ secrets.DOTENV }}
+
+      - name: Set up Git authentication
+        run: |
+          git config --global url."https://${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
+        env:
+          GIT_AUTH_TOKEN: ${{ secrets.GIT_AUTH_TOKEN }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: fastlane
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Generate runtime env artifacts
+        run: |
+          (cd tools/cli && dart pub get)
+          dart run tools/cli/bin/gen_env.dart
+
+      - name: Setup Keychain
+        run: |
+          security create-keychain -p "" build.keychain
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -l
+          security set-keychain-settings -u build.keychain
+
+      - name: Install FlutterFire CLI
+        run: dart pub global activate flutterfire_cli
+
+      - name: Get Dependencies
+        working-directory: app
+        run: |
+          flutter pub get
+          cd ios && pod install
+
+      - name: Run Code Generation
+        working-directory: app
+        run: ./build.sh
+
+      - name: Decode Firebase Service Account
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 --decode > fastlane/firebase-service-account.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+
+      - name: Decode App Store Connect API Key
+        run: |
+          echo "${APP_STORE_CONNECT_API_KEY_CONTENT}" | base64 --decode > "$HOME/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+
+      - name: Distribute iOS to Firebase
+        working-directory: fastlane
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_KEYCHAIN_NAME: build.keychain
+          MATCH_KEYCHAIN_PASSWORD: ""
+          BUILD_NUMBER: ${{ github.run_number }}
+          FIREBASE_SERVICE_CREDENTIALS_FILE: ${{ github.workspace }}/fastlane/firebase-service-account.json
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          export APP_STORE_CONNECT_API_KEY_FILE="$HOME/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          bundle exec fastlane distribute_ios

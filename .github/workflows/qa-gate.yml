@@ -1,0 +1,144 @@
+name: QA Gate
+
+# PR 생성/업데이트 시, 그리고 main/develop 직접 push 시 실행.
+# 실패 시 #errors Discord 알림 + 머지/배포 차단.
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: qa-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa-gate:
+    name: QA Gate (analyze + test + coverage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ── 체크아웃 ────────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # PR base와 diff하려면 전체 히스토리 필요 (변경-기능 게이트)
+
+      # ── Flutter 설치 ────────────────────────────────────────────────────────
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # ── 코드 생성 (P0-9) ────────────────────────────────────────────────────
+      # env 산출물 + pub get + build_runner 2-pass + drift 동기화.
+      # 이 단계 부재(생성 파일은 gitignore)가 qa-gate 연속 실패의 뿌리였다.
+      - name: Codegen (./run build)
+        run: ./run build
+
+      # ── flutter analyze ─────────────────────────────────────────────────────
+      - name: Analyze (flutter analyze)
+        working-directory: app
+        run: flutter analyze --no-fatal-infos
+
+      # ── flutter test + coverage ─────────────────────────────────────────────
+      - name: Test with coverage
+        working-directory: app
+        run: flutter test --coverage --no-pub
+
+      # ── 커버리지 임계값 체크 ────────────────────────────────────────────────
+      - name: Check coverage threshold
+        working-directory: app
+        env:
+          # 템플릿 기본 테스트의 실측치(3%) 기준 — 앱이 테스트를 쌓으면
+          # repo Variables의 COVERAGE_THRESHOLD로 래칫을 올릴 것 (P0-9)
+          THRESHOLD: ${{ vars.COVERAGE_THRESHOLD || '3' }}
+        run: |
+          if [ ! -f coverage/lcov.info ]; then
+            echo "⚠️  lcov.info 없음 — 커버리지 체크 건너뜀"
+            exit 0
+          fi
+          # 생성 코드 제외 (.g/.freezed/.drift/generated/table_generator)
+          FILTERED=$(awk '
+            /^SF:/ { skip = ($0 ~ /\.g\.dart|\.freezed\.dart|\.drift\.dart|\/generated\/|table_generator\//) }
+            !skip { print }
+          ' coverage/lcov.info)
+          LF=$(echo "$FILTERED" | grep -E '^LF:' | awk -F: '{sum+=$2} END {print sum}')
+          LH=$(echo "$FILTERED" | grep -E '^LH:' | awk -F: '{sum+=$2} END {print sum}')
+          if [ "${LF:-0}" -eq 0 ]; then
+            echo "⚠️  커버리지 측정 대상 라인 없음"
+            exit 0
+          fi
+          PCT=$(( LH * 100 / LF ))
+          echo "Coverage: ${PCT}% (${LH}/${LF} lines, threshold: ${THRESHOLD}%)"
+          if [ "$PCT" -lt "$THRESHOLD" ]; then
+            echo "❌ 커버리지 ${PCT}% < ${THRESHOLD}% 기준 미달"
+            exit 1
+          fi
+          echo "✅ 커버리지 통과"
+
+      # ── 변경-기능 단위 커버리지 게이트 (80%) ────────────────────────────────
+      # PR이 건드린 lib/features/<name>/ 각각의 손작성 커버리지가 기준 미만이면 차단.
+      # preflight --mode feature 의 _checkFeatureCoverage 와 동일 계약(단일 출처: 80%).
+      - name: Check changed-feature coverage
+        if: github.event_name == 'pull_request'
+        working-directory: app
+        env:
+          FEATURE_THRESHOLD: ${{ vars.FEATURE_COVERAGE_THRESHOLD || '80' }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ ! -f coverage/lcov.info ]; then
+            echo "⚠️  lcov.info 없음 — 변경-기능 게이트 건너뜀"; exit 0
+          fi
+          # base sha를 못 받거나(shallow/fork) git diff 실패 시 set -e 중단 대신
+          # 빈 집합으로 폴백 — 게이트는 통과시키되 로그로 알린다.
+          FEATURES=$(git -C .. diff --name-only "$BASE_SHA"...HEAD -- 'app/lib/features/*' 2>/dev/null \
+            | sed -n 's#^app/lib/features/\([^/]*\)/.*#\1#p' | sort -u) || FEATURES=""
+          if [ -z "$FEATURES" ]; then
+            echo "변경된 기능 없음(또는 base diff 불가) — 게이트 통과"; exit 0
+          fi
+          FAIL=0
+          for F in $FEATURES; do
+            SEC=$(awk -v f="lib/features/$F/" '
+              /^SF:/ { inblk = (index($0, f) > 0) && ($0 !~ /\.g\.dart|\.freezed\.dart|\.drift\.dart|\/generated\/|table_generator\//) }
+              inblk && /^LF:/ { lf += substr($0,4) }
+              inblk && /^LH:/ { lh += substr($0,4) }
+              END { print lf "," lh }
+            ' coverage/lcov.info)
+            LF=${SEC%,*}; LH=${SEC#*,}
+            if [ "${LF:-0}" -eq 0 ]; then
+              echo "❌ [$F] 커버리지 데이터 없음 — 테스트 미작성?"; FAIL=1; continue
+            fi
+            PCT=$(( LH * 100 / LF ))
+            if [ "$PCT" -lt "$FEATURE_THRESHOLD" ]; then
+              echo "❌ [$F] ${PCT}% < ${FEATURE_THRESHOLD}% (변경 기능 게이트)"; FAIL=1
+            else
+              echo "✅ [$F] ${PCT}%"
+            fi
+          done
+          [ "$FAIL" -eq 0 ] || exit 1
+
+      # ── 실패 시 Discord #errors 알림 ────────────────────────────────────────
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_ERRORS_WEBHOOK }}
+          APP_NAME:        ${{ vars.APP_NAME }}
+          GH_SHA:          ${{ github.sha }}
+          GH_RUN_ID:       ${{ github.run_id }}
+          GH_REPO:         ${{ github.repository }}
+          GH_SERVER:       ${{ github.server_url }}
+          HEAD_REF:        ${{ github.head_ref }}
+          REF_NAME:        ${{ github.ref_name }}
+        run: |
+          SHORT_SHA="${GH_SHA:0:7}"
+          BRANCH="${HEAD_REF:-$REF_NAME}"
+          NAME="${APP_NAME:-$GH_REPO}"
+          RUN_URL="${GH_SERVER}/${GH_REPO}/actions/runs/${GH_RUN_ID}"
+          MSG=$(printf '🚨 QA Gate 실패: **%s** (%s@%s)\n실패 로그: %s\n배포가 차단되었습니다. 수정 후 재시도하세요.' \
+            "$NAME" "$BRANCH" "$SHORT_SHA" "$RUN_URL")
+          jq -n --arg content "$MSG" '{content: $content, username: "QA-Bot"}' \
+            | curl -sS -X POST -H 'Content-Type: application/json' --data @- --max-time 5 "$DISCORD_WEBHOOK" \
+            || echo "Webhook send failed"

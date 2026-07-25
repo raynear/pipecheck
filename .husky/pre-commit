@@ -1,0 +1,114 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# =================================================
+# Flutter BoilerPlate Pre-commit Hook
+# =================================================
+# 커밋 전 자동으로 코드 품질 검증을 수행합니다.
+# 설정: .boilerplate/config.yaml
+# =================================================
+
+# 무한 루프 방지: 이미 훅이 실행 중이면 스킵
+if [ -n "$HUSKY_SKIP_HOOKS" ]; then
+  echo "⏭️  Pre-commit hook skipped (HUSKY_SKIP_HOOKS=1)"
+  exit 0
+fi
+
+# 설정 파일 경로
+CONFIG_FILE=".boilerplate/config.yaml"
+
+# 기본 설정값
+ENABLED="true"
+ENFORCEMENT_LEVEL="full"
+AUTO_FIX="true"
+SKIP_ON_WIP="false"
+MAX_FIX_ATTEMPTS=3
+
+# 설정 파일에서 값 읽기 (yq가 없으면 기본값 사용)
+if command -v yq &> /dev/null && [ -f "$CONFIG_FILE" ]; then
+  ENABLED=$(yq '.pre_commit.enabled // true' "$CONFIG_FILE" 2>/dev/null || echo "true")
+  ENFORCEMENT_LEVEL=$(yq '.pre_commit.enforcement_level // "full"' "$CONFIG_FILE" 2>/dev/null || echo "full")
+  AUTO_FIX=$(yq '.pre_commit.auto_fix // true' "$CONFIG_FILE" 2>/dev/null || echo "true")
+  SKIP_ON_WIP=$(yq '.pre_commit.skip_on_wip // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
+  MAX_FIX_ATTEMPTS=$(yq '.pre_commit.max_fix_attempts // 3' "$CONFIG_FILE" 2>/dev/null || echo "3")
+fi
+
+# Pre-commit이 비활성화되어 있으면 스킵
+if [ "$ENABLED" = "false" ]; then
+  echo "⏭️  Pre-commit hook disabled in config"
+  exit 0
+fi
+
+# WIP 커밋 검사 (skip_on_wip이 true일 때)
+if [ "$SKIP_ON_WIP" = "true" ]; then
+  COMMIT_MSG_FILE=".git/COMMIT_EDITMSG"
+  if [ -f "$COMMIT_MSG_FILE" ]; then
+    if grep -qi "WIP" "$COMMIT_MSG_FILE"; then
+      echo "⏭️  WIP commit detected, skipping pre-commit checks"
+      exit 0
+    fi
+  fi
+fi
+
+echo "🔍 Pre-commit 검증 시작..."
+echo ""
+
+# 시도 횟수 카운터
+FIX_ATTEMPTS=0
+
+run_checks() {
+  # lint-staged 실행 (변경된 파일만 검증)
+  npx lint-staged
+  return $?
+}
+
+# 검증 실행
+run_checks
+RESULT=$?
+
+# 자동 수정이 활성화되어 있고 검증 실패 시
+while [ $RESULT -ne 0 ] && [ "$AUTO_FIX" = "true" ] && [ $FIX_ATTEMPTS -lt $MAX_FIX_ATTEMPTS ]; do
+  FIX_ATTEMPTS=$((FIX_ATTEMPTS + 1))
+  echo ""
+  echo "🔧 자동 수정 시도 ($FIX_ATTEMPTS/$MAX_FIX_ATTEMPTS)..."
+
+  # 포맷팅 자동 수정
+  cd app 2>/dev/null && dart format . && cd ..
+
+  # 자동 수정 가능한 lint 오류 수정
+  cd app 2>/dev/null && dart fix --apply && cd ..
+
+  # 수정된 파일 다시 스테이징
+  git add -u
+
+  # 다시 검증
+  run_checks
+  RESULT=$?
+done
+
+# 결과 처리
+if [ $RESULT -ne 0 ]; then
+  echo ""
+  if [ "$ENFORCEMENT_LEVEL" = "optional" ]; then
+    echo "⚠️  검증 실패 (optional 모드 - 커밋 허용)"
+    echo ""
+    echo "💡 수동으로 수정하려면:"
+    echo "   cd app && dart format . && dart fix --apply"
+    exit 0
+  else
+    echo "❌ 검증 실패 - 커밋이 거부되었습니다"
+    echo ""
+    echo "💡 해결 방법:"
+    echo "   1. dart format . - 포맷팅 수정"
+    echo "   2. dart fix --apply - 자동 수정 가능한 lint 오류 수정"
+    echo "   3. 수동으로 나머지 오류 수정"
+    echo ""
+    echo "💡 WIP 커밋으로 임시 우회:"
+    echo '   git commit -m "WIP: 작업 중"'
+    echo "   (.boilerplate/config.yaml에서 skip_on_wip: true 필요)"
+    exit 1
+  fi
+fi
+
+echo ""
+echo "✅ Pre-commit 검증 통과!"

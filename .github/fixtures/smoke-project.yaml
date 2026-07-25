@@ -1,0 +1,77 @@
+# ============================================
+# CI Smoke Fixture — template-smoke.yml 전용
+# ============================================
+# fork가 루트 project.yaml을 편집하는 단계를 재현하기 위한 fixture.
+# 워크플로우가 init 실행 전에 루트 project.yaml 위로 복사한다.
+#
+# 정체성(name/package_name)을 템플릿 기본값과 의도적으로 다르게 설정 —
+# rename step이 실제로 동작해야 하며, P0-5(rename 재작성) 완료 시
+# 이 fixture가 스모크를 red→green으로 뒤집는 검증 지점이 된다.
+#
+# 시크릿/실계정 값 금지: 이 파일은 fork PR CI에서도 그대로 쓰인다.
+
+project:
+  name: "Smoke App"
+  package_name: "com.example.smokeapp"
+  description: "Template smoke fixture — fork golden-path CI"
+  version: "0.0.1"
+  github_repository: ""
+  category: "productivity"
+  secondary_category: ""
+
+# 연령등급 전부 0 — 스토어 step은 CI에서 skip되지만 스키마 완전성 유지
+age_rating:
+  cartoon_fantasy_violence: 0
+  realistic_violence: 0
+  prolonged_graphic_sadistic_violence: 0
+  profanity_crude_humor: 0
+  mature_suggestive_themes: 0
+  horror_fear_themes: 0
+  medical_treatment_info: 0
+  alcohol_tobacco_drugs: 0
+  gambling: 0
+  sexual_content_nudity: 0
+  unrestricted_web_access: 0
+  gambling_contests: 0
+
+# 도구 핀 — 스모크는 fastlane 명령을 쓰지 않지만 스키마 일치 유지
+tooling:
+  fastlane_ref: "v0.2.8"
+
+listing:
+  short_description: ""
+  keywords: []
+  primary_locale: "en-US"
+  privacy_policy_url: ""
+  terms_of_service_url: ""
+  contact_email: ""
+
+# AdMob 비움 — debug 빌드는 Google 테스트 ID 자동 주입(P0-1), release는 스모크 범위 밖
+admob:
+  ios_app_id: ""
+  android_app_id: ""
+  units:
+    ios:
+      banner: ""
+      interstitial: ""
+      rewarded: ""
+      rewarded_interstitial: ""
+      native: ""
+      app_open: ""
+    android:
+      banner: ""
+      interstitial: ""
+      rewarded: ""
+      rewarded_interstitial: ""
+      native: ""
+      app_open: ""
+
+icon:
+  prompt: ""
+  style: "modern"
+  background_color: "#FFFFFF"
+
+# IAP 최소 스키마 — store/metadata step은 skip되므로 미사용, 구조 검증용으로만 유지
+iap:
+  subscriptions: []
+  products: []

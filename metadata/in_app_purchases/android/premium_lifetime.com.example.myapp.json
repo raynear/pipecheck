@@ -1,0 +1,43 @@
+{
+  "productId": "premium_lifetime.com.example.myapp",
+  "purchaseType": "managedUser",
+  "defaultLanguage": "en-US",
+  "defaultPrice": {
+    "priceMicros": "59990000",
+    "currency": "USD"
+  },
+  "listings": {
+    "en-US": {
+      "title": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    "ko-KR": {
+      "title": "평생 프리미엄",
+      "description": "모든 프리미엄 기능을 영구적으로 잠금 해제"
+    },
+    "ja-JP": {
+      "title": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    "zh-CN": {
+      "title": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    "de-DE": {
+      "title": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    "fr-FR": {
+      "title": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    "ru-RU": {
+      "title": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    },
+    "pt-BR": {
+      "title": "Lifetime Premium",
+      "description": "Permanently unlock all premium features"
+    }
+  }
+}

@@ -1,0 +1,147 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+devtools_options.yaml
+.vscode/
+app/lib/data/generated/
+
+*.g.dart
+*.freezed.dart
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+.kotlin/
+
+/android/build
+
+#env (anchored — 산출물/시크릿만, repo 전체 그림자 ignore 방지)
+/.env
+/.env.backup
+/app/config/env/.env.debug
+/app/config/env/.env.profile
+/app/config/env/.env.release
+/supabase/.env
+
+# fastlane specific files
+fastlane/report.xml
+fastlane/test_output
+fastlane/credentials.json
+fastlane/google-play-config.json
+fastlane/firebase-service-account.json
+fastlane/AuthKey_*.p8
+
+# secrets setup
+secrets.conf
+*.p8
+*.jks
+
+testers.json
+chrome-data/
+
+fastlane/report.xml
+
+# Specific paths for build artifacts
+ios/build/
+android/build/
+builds/
+build/
+Runner.ipa
+Runner.app.dSYM.zip
+
+# Added by Claude Task Master
+# Logs
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/
+
+# CLI Tools (generated files)
+.boilerplate/
+.local/
+
+# BMAD workflow outputs (generated per project)
+_bmad-output/
+docs/project-scan-report.json
+
+# Screenshot tool generated outputs
+app/store_data/screenshots/uploads/
+
+# SvelteKit
+.svelte-kit/
+tools/screenshot_web/.svelte-kit/
+tools/screenshot_web/build/
+tools/screenshot_web/node_modules/
+# Playwright MCP
+.playwright-mcp/
+
+# Claude Code local files (claude-mem plugin)
+**/CLAUDE.md
+!/CLAUDE.md
+.claude/plans/
+.claude/skills/
+
+app/coverage/
+
+# 스크린샷 산출물 (P1-17b) — ./run screenshot이 생성, deliver가 소비
+/screenshots/
+
+# 스토어 메타데이터 스크린샷 (작성자 자산 — 포커가 ./run screenshot으로 생성)
+# Android(phoneScreenshots/featureGraphic/icon) + iOS(iPhone_*/iPad_* 디바이스 디렉토리)
+metadata/**/images/
+metadata/ios/**/iPhone_*/
+metadata/ios/**/iPad_*/
