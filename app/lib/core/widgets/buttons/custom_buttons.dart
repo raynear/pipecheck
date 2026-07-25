@@ -1,4 +1,4 @@
-import 'package:boilerplate/core/design/design.dart';
+import 'package:pipecheck/core/design/design.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 

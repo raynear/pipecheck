@@ -1,4 +1,4 @@
-import 'package:boilerplate/data/datasources/base_datasource.dart';
+import 'package:pipecheck/data/datasources/base_datasource.dart';
 
 /// 일반화된 데이터베이스 인터페이스
 /// 테이블에 독립적인 CRUD 작업 제공

@@ -1,4 +1,4 @@
-import 'package:boilerplate/data/table_generator/annotations.dart';
+import 'package:pipecheck/data/table_generator/annotations.dart';
 
 /// 포스트-태그 다대다 관계 테이블
 @GenerateTable(tableName: 'post_tag')

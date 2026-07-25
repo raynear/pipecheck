@@ -3,7 +3,7 @@
 // 기본 위젯(LoadingIndicator/AppErrorWidget/EmptyState)은 디자인 시스템
 // (context.colors 등 = ProviderScope.containerOf)을 쓰므로 ProviderScope로 감싼다.
 
-import 'package:boilerplate/core/widgets/async/async_value_view.dart';
+import 'package:pipecheck/core/widgets/async/async_value_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

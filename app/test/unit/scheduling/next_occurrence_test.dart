@@ -4,8 +4,8 @@
 // 정확)를 이식하고, 그 위에 recurrence×시각 → 다음 N개 발화 순간 확장을 얹는다.
 // timezone 패키지의 명명 로케이션으로 결정적·테스트 가능(디바이스 존 비의존).
 
-import 'package:boilerplate/core/services/scheduling/next_occurrence.dart';
-import 'package:boilerplate/core/services/scheduling/reminder_recurrence.dart';
+import 'package:pipecheck/core/services/scheduling/next_occurrence.dart';
+import 'package:pipecheck/core/services/scheduling/reminder_recurrence.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;

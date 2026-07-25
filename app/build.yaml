@@ -2,7 +2,7 @@ targets:
   $default:
     builders:
       # Enable all builders
-      boilerplate:table_generator:
+      pipecheck:table_generator:
         enabled: true
         options:
           # 자동 업데이트 설정
@@ -50,7 +50,7 @@ targets:
 
 builders:
   table_generator:
-    import: "package:boilerplate/data/table_generator/builder.dart"
+    import: "package:pipecheck/data/table_generator/builder.dart"
     builder_factories: ["tableGeneratorBuilder"]
     build_extensions:
       ".dart": [".drift.dart", ".model.dart", ".repository.dart"]

@@ -1,5 +1,5 @@
-import 'package:boilerplate/data/generated/models/badge.model.dart';
-import 'package:boilerplate/data/generated/repositories/badge.repository.dart';
+import 'package:pipecheck/data/generated/models/badge.model.dart';
+import 'package:pipecheck/data/generated/repositories/badge.repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:utils/utils.dart';
 

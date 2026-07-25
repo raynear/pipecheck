@@ -1,10 +1,10 @@
 import 'dart:io';
 
-import 'package:boilerplate/config/app_config.dart';
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/remote_config_service.dart';
+import 'package:pipecheck/config/app_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/remote_config_service.dart';
 import 'package:flutter/material.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';

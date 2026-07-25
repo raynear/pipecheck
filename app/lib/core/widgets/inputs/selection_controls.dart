@@ -1,4 +1,4 @@
-import 'package:boilerplate/core/design/design.dart';
+import 'package:pipecheck/core/design/design.dart';
 import 'package:flutter/material.dart';
 
 /// 적응형 체크박스

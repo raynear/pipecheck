@@ -1,8 +1,8 @@
-import 'package:boilerplate/core/services/pin_service.dart';
-import 'package:boilerplate/core/services/snackbar_service.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
-import 'package:boilerplate/core/widgets/inputs/pin_entry.dart';
-import 'package:boilerplate/core/widgets/navigation/adaptive_app_bar.dart';
+import 'package:pipecheck/core/services/pin_service.dart';
+import 'package:pipecheck/core/services/snackbar_service.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/inputs/pin_entry.dart';
+import 'package:pipecheck/core/widgets/navigation/adaptive_app_bar.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

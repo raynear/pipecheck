@@ -4,7 +4,7 @@
 // 타입드 뷰)을 도메인 비결합 형태로 이식. DB TEXT 쌍과의 인코드/디코드는 total
 // (절대 throw 안 함, 손상 입력은 안전 폴백), activeDays는 ISO 요일(월=1..일=7).
 
-import 'package:boilerplate/core/services/scheduling/reminder_recurrence.dart';
+import 'package:pipecheck/core/services/scheduling/reminder_recurrence.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

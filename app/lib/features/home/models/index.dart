@@ -2,7 +2,7 @@
 ///
 /// 사용 예시:
 /// ```dart
-/// import 'package:boilerplate/features/home/models/index.dart';
+/// import 'package:pipecheck/features/home/models/index.dart';
 /// ```
 library;
 

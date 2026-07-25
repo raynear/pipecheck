@@ -4,7 +4,7 @@
 // 로직 테스트는 app/packages/ads/test/ad_consent_test.dart. 여기서는 앱 소유의
 // AppFeatureConfig 플래그 배선만 고정한다.
 
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

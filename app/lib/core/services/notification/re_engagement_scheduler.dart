@@ -1,4 +1,4 @@
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:utils/utils.dart';

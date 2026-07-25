@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/file_service.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/file_service.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';

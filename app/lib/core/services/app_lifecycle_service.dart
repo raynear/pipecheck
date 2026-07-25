@@ -1,6 +1,6 @@
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/badge_service.dart';
-import 'package:boilerplate/core/services/notification/notification.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/badge_service.dart';
+import 'package:pipecheck/core/services/notification/notification.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:utils/utils.dart';

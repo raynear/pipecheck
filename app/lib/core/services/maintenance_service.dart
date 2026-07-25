@@ -1,6 +1,6 @@
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/remote_config_service.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/remote_config_service.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:utils/utils.dart';
 

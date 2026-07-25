@@ -6,7 +6,7 @@
 
 import 'dart:convert';
 
-import 'package:boilerplate/core/services/restore_service.dart';
+import 'package:pipecheck/core/services/restore_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 String _backup(Map<String, List<Map<String, dynamic>>> tables) => jsonEncode({

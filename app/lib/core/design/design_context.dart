@@ -1,5 +1,5 @@
-import 'package:boilerplate/core/design/design_system.dart';
-import 'package:boilerplate/core/design/design_system_provider.dart';
+import 'package:pipecheck/core/design/design_system.dart';
+import 'package:pipecheck/core/design/design_system_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

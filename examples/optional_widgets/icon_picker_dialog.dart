@@ -1,6 +1,6 @@
-import 'package:boilerplate/core/constants/icon_map.dart';
+import 'package:pipecheck/core/constants/icon_map.dart';
 // import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:flutter/material.dart';
 
 class IconPickerDialog extends StatelessWidget {

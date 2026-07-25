@@ -4,12 +4,12 @@
 // 숨겨진다. 앱 데이터 초기화 티어는 항상 표시되며, 확인 시 DB wipe + PIN 제거 +
 // 잠금 해제(userAuthOption=none) 후 홈으로 이동한다. DB는 가짜로 대체한다.
 
-import 'package:boilerplate/core/services/pin_service.dart';
-import 'package:boilerplate/core/services/secure_store.dart';
-import 'package:boilerplate/core/state/settings.dart';
-import 'package:boilerplate/data/core/repositories/repository_providers.dart';
-import 'package:boilerplate/data/datasources/database_datasource.dart';
-import 'package:boilerplate/features/auth/views/pin_recovery_view.dart';
+import 'package:pipecheck/core/services/pin_service.dart';
+import 'package:pipecheck/core/services/secure_store.dart';
+import 'package:pipecheck/core/state/settings.dart';
+import 'package:pipecheck/data/core/repositories/repository_providers.dart';
+import 'package:pipecheck/data/datasources/database_datasource.dart';
+import 'package:pipecheck/features/auth/views/pin_recovery_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

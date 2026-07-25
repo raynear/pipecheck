@@ -1,4 +1,4 @@
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:flutter/material.dart';
 
 class WeekNavigation extends StatelessWidget {

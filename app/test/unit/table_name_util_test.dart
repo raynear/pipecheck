@@ -7,7 +7,7 @@
 // 읽어 `_getTable`과 동일하게 소문자 정규화한다 — repository `_tableName`과 같은
 // 문자열이라 재유도 없이 정확하다.
 
-import 'package:boilerplate/data/table_generator/table_name_util.dart';
+import 'package:pipecheck/data/table_generator/table_name_util.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // drift_table_generator가 실제로 심는 형태의 최소 파일 조각.

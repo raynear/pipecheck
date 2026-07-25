@@ -1,4 +1,4 @@
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:stylish_bottom_bar/stylish_bottom_bar.dart';

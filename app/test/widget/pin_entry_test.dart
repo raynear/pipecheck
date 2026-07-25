@@ -3,12 +3,12 @@
 // EasyLocalization 미초기화 → .tr()는 키를 그대로 반환하므로 키로 assert한다.
 // 검증 결과는 PinService(인메모리 SecureStore)로 결정적으로 구성한다.
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/pin_service.dart';
-import 'package:boilerplate/core/services/secure_store.dart';
-import 'package:boilerplate/core/state/settings.dart';
-import 'package:boilerplate/core/widgets/inputs/pin_entry.dart';
-import 'package:boilerplate/features/auth/views/authentication_view.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/pin_service.dart';
+import 'package:pipecheck/core/services/secure_store.dart';
+import 'package:pipecheck/core/state/settings.dart';
+import 'package:pipecheck/core/widgets/inputs/pin_entry.dart';
+import 'package:pipecheck/features/auth/views/authentication_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

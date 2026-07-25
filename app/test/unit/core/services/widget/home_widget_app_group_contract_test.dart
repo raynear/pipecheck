@@ -15,7 +15,7 @@
 
 import 'dart:io';
 
-import 'package:boilerplate/core/services/widget/home_widget_service.dart';
+import 'package:pipecheck/core/services/widget/home_widget_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// entitlements plist의 `com.apple.security.application-groups` 배열에서 첫

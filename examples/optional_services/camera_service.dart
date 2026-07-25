@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:gallery_saver_plus/gallery_saver.dart';

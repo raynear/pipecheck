@@ -1,9 +1,9 @@
 import 'package:ads/ads.dart';
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/router.dart';
-import 'package:boilerplate/core/services/privacy_consent_service.dart';
-import 'package:boilerplate/core/state/settings.dart';
-import 'package:boilerplate/core/widgets/dialogs/privacy_consent_dialog.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/router.dart';
+import 'package:pipecheck/core/services/privacy_consent_service.dart';
+import 'package:pipecheck/core/state/settings.dart';
+import 'package:pipecheck/core/widgets/dialogs/privacy_consent_dialog.dart';
 import 'package:collection/collection.dart';
 import 'package:firebase_services/firebase_services.dart';
 import 'package:flutter/material.dart';

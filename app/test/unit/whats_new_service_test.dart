@@ -4,7 +4,7 @@
 // readVersion/readLastSeen/writeLastSeen 람다만 받으므로 플러그인 없이 검증한다.
 // 트리거 = semver 마이너 이상(패치는 스킵, 사용자 결정).
 
-import 'package:boilerplate/core/services/whats_new_service.dart';
+import 'package:pipecheck/core/services/whats_new_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 WhatsNewService _svc(

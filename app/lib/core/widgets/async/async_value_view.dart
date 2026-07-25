@@ -1,6 +1,6 @@
-import 'package:boilerplate/core/widgets/error/error_widget.dart';
-import 'package:boilerplate/core/widgets/feedback/empty_state.dart';
-import 'package:boilerplate/core/widgets/loading/loading_indicator.dart';
+import 'package:pipecheck/core/widgets/error/error_widget.dart';
+import 'package:pipecheck/core/widgets/feedback/empty_state.dart';
+import 'package:pipecheck/core/widgets/loading/loading_indicator.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

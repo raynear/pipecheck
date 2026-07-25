@@ -1,7 +1,7 @@
 import 'dart:math';
 
-import 'package:boilerplate/core/widgets/common/semantics.dart';
-import 'package:boilerplate/data/generated/models/badge.model.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
+import 'package:pipecheck/data/generated/models/badge.model.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 

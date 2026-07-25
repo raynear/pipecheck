@@ -42,9 +42,9 @@ services:
 
 monetization:
   ads:
-    enabled: true
+    enabled: false
   subscription:
-    enabled: true
+    enabled: false
 
 store:
   apple:

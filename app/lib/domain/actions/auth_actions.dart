@@ -1,12 +1,12 @@
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/notification/notification.dart';
-import 'package:boilerplate/core/services/snackbar_service.dart';
-import 'package:boilerplate/data/definitions/badge.dart';
-import 'package:boilerplate/data/generated/models/badge.model.dart';
-import 'package:boilerplate/data/generated/models/user.model.dart';
-import 'package:boilerplate/data/generated/repositories/badge.repository.dart';
-import 'package:boilerplate/data/generated/repositories/user.repository.dart';
-import 'package:boilerplate/domain/models/action_result.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/notification/notification.dart';
+import 'package:pipecheck/core/services/snackbar_service.dart';
+import 'package:pipecheck/data/definitions/badge.dart';
+import 'package:pipecheck/data/generated/models/badge.model.dart';
+import 'package:pipecheck/data/generated/models/user.model.dart';
+import 'package:pipecheck/data/generated/repositories/badge.repository.dart';
+import 'package:pipecheck/data/generated/repositories/user.repository.dart';
+import 'package:pipecheck/domain/models/action_result.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 

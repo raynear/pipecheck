@@ -8,7 +8,7 @@
 
 import 'dart:async';
 
-import 'package:boilerplate/core/services/permission/notification_priming.dart';
+import 'package:pipecheck/core/services/permission/notification_priming.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeClient implements NotificationPermissionClient {

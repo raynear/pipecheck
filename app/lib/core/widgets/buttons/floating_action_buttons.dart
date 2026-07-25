@@ -1,4 +1,4 @@
-import 'package:boilerplate/core/design/design.dart';
+import 'package:pipecheck/core/design/design.dart';
 import 'package:flutter/material.dart';
 
 /// 확장 가능한 FAB (6:3:1 비율 준수)

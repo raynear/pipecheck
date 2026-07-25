@@ -1,4 +1,4 @@
-import 'package:boilerplate/core/design/design.dart';
+import 'package:pipecheck/core/design/design.dart';
 import 'package:flutter/material.dart';
 
 /// 디자인 시스템에 따라 자동으로 스타일이 변경되는 버튼

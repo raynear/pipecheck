@@ -8,7 +8,7 @@
 // 추려 넘겨준다(Firebase 의존이라 여기서는 테스트하지 않음) — 이 테스트는
 // 이미 필터된 맵을 받았다고 가정한다.
 
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

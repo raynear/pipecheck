@@ -3,13 +3,13 @@ import 'dart:io';
 
 import 'package:ads/ads.dart';
 import 'package:authentication/authentication.dart';
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/config/firebase_options.dart';
-import 'package:boilerplate/core/services/ab_test_service.dart';
-import 'package:boilerplate/core/services/app_review_service.dart';
-import 'package:boilerplate/core/services/notification/notification.dart';
-import 'package:boilerplate/core/services/privacy_consent_service.dart';
-import 'package:boilerplate/core/state/settings.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/config/firebase_options.dart';
+import 'package:pipecheck/core/services/ab_test_service.dart';
+import 'package:pipecheck/core/services/app_review_service.dart';
+import 'package:pipecheck/core/services/notification/notification.dart';
+import 'package:pipecheck/core/services/privacy_consent_service.dart';
+import 'package:pipecheck/core/state/settings.dart';
 import 'package:easy_localization/easy_localization.dart';
 // firebase_core도 'FirebaseService'를 export하므로 숨긴다 — 여기선
 // firebase_services 패키지의 FirebaseService(Analytics 파사드)를 쓴다.

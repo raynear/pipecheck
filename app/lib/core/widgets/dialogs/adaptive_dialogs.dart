@@ -1,5 +1,5 @@
-import 'package:boilerplate/core/design/design.dart';
-import 'package:boilerplate/core/widgets/buttons/adaptive_button.dart';
+import 'package:pipecheck/core/design/design.dart';
+import 'package:pipecheck/core/widgets/buttons/adaptive_button.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 

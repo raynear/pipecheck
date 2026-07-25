@@ -1,7 +1,7 @@
-import 'package:boilerplate/domain/actions/auth_actions.dart';
-import 'package:boilerplate/domain/providers/domain_providers.dart';
-import 'package:boilerplate/features/auth/view_models/auth_view_model.dart';
-import 'package:boilerplate/features/home/models/home_model.dart';
+import 'package:pipecheck/domain/actions/auth_actions.dart';
+import 'package:pipecheck/domain/providers/domain_providers.dart';
+import 'package:pipecheck/features/auth/view_models/auth_view_model.dart';
+import 'package:pipecheck/features/home/models/home_model.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

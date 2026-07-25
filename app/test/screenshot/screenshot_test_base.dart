@@ -1,8 +1,8 @@
 /// Screenshot Test Base
 library;
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/main.dart' as app;
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/main.dart' as app;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

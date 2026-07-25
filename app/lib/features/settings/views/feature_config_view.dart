@@ -1,5 +1,5 @@
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/widgets/navigation/adaptive_app_bar.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/widgets/navigation/adaptive_app_bar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

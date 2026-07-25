@@ -4,9 +4,9 @@
 // (인메모리 SecureStore)로 결정적으로 구성한다. PinSetupView는 라우터 없이
 // 호스팅하므로 성공 시 pop은 생략되지만(canPop=false) setPin은 실행된다.
 
-import 'package:boilerplate/core/services/pin_service.dart';
-import 'package:boilerplate/core/services/secure_store.dart';
-import 'package:boilerplate/features/auth/views/pin_setup_view.dart';
+import 'package:pipecheck/core/services/pin_service.dart';
+import 'package:pipecheck/core/services/secure_store.dart';
+import 'package:pipecheck/features/auth/views/pin_setup_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

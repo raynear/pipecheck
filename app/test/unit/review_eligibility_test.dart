@@ -2,7 +2,7 @@
 // 수렴). 스토어 평점을 보호하려면 프롬프트를 만족·몰입 사용자에게만, 충분한
 // 쿨다운 뒤에만 낸다. 순수 함수라 플러그인/시계 없이 검증한다.
 
-import 'package:boilerplate/core/services/review/review_eligibility.dart';
+import 'package:pipecheck/core/services/review/review_eligibility.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

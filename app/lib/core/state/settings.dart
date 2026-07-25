@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:boilerplate/config/app_config.dart';
-import 'package:boilerplate/core/design/design_system_provider.dart';
+import 'package:pipecheck/config/app_config.dart';
+import 'package:pipecheck/core/design/design_system_provider.dart';
 import 'package:flutter/foundation.dart' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;

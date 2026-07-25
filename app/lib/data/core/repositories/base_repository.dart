@@ -1,4 +1,4 @@
-import 'package:boilerplate/data/datasources/database_datasource.dart';
+import 'package:pipecheck/data/datasources/database_datasource.dart';
 import 'package:utils/utils.dart';
 
 /// Generic base repository with full CRUD implementation

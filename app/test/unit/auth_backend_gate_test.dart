@@ -8,9 +8,9 @@
 // false — 게이트가 뚫리면 FirebaseAuth.instance 접근에서 예외가 나며
 // 테스트가 실패한다 (게이트 검증과 누출 검증을 겸함).
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/state/auth_state.dart';
-import 'package:boilerplate/features/auth/view_models/auth_view_model.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/state/auth_state.dart';
+import 'package:pipecheck/features/auth/view_models/auth_view_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

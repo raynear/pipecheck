@@ -520,7 +520,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 21;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 582QW569QX;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
@@ -530,7 +530,7 @@
 					"@executable_path/Frameworks",
 				);
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.boilerplate;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.pipecheck;
 				PRODUCT_NAME = BoilerPlate;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -553,7 +553,7 @@
 				CURRENT_PROJECT_VERSION = 21;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.boilerplate.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.pipecheck.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -571,7 +571,7 @@
 				CURRENT_PROJECT_VERSION = 21;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.boilerplate.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.pipecheck.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
@@ -587,7 +587,7 @@
 				CURRENT_PROJECT_VERSION = 21;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.boilerplate.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.pipecheck.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
@@ -718,7 +718,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 21;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 582QW569QX;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
@@ -728,7 +728,7 @@
 					"@executable_path/Frameworks",
 				);
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.boilerplate.dev;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.pipecheck.dev;
 				PRODUCT_NAME = "BoilerPlate Dev";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -756,8 +756,8 @@
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 21;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = "";
+				DEVELOPMENT_TEAM = 582QW569QX;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 582QW569QX;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
@@ -766,7 +766,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.boilerplate;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raynear.pipecheck;
 				PRODUCT_NAME = BoilerPlate;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = habit;

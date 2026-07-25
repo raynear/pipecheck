@@ -1,7 +1,7 @@
-import 'package:boilerplate/core/design/design.dart';
+import 'package:pipecheck/core/design/design.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 
 /// 빈 상태를 보여주는 위젯
 class EmptyState extends StatelessWidget {

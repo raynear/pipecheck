@@ -1,4 +1,4 @@
-import 'package:boilerplate/core/design/design_system.dart';
+import 'package:pipecheck/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// Material3 간격 시스템

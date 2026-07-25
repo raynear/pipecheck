@@ -1,13 +1,13 @@
-import 'package:boilerplate/core/services/notification_service.dart';
-import 'package:boilerplate/core/services/snackbar_service.dart';
-import 'package:boilerplate/data/definitions/badge.dart';
-import 'package:boilerplate/data/definitions/post.dart';
-import 'package:boilerplate/data/generated/models/badge.model.dart';
-import 'package:boilerplate/data/generated/models/post.model.dart';
-import 'package:boilerplate/data/generated/repositories/badge.repository.dart';
-import 'package:boilerplate/data/generated/repositories/post.repository.dart';
-import 'package:boilerplate/data/generated/repositories/user.repository.dart';
-import 'package:boilerplate/domain/models/action_result.dart';
+import 'package:pipecheck/core/services/notification_service.dart';
+import 'package:pipecheck/core/services/snackbar_service.dart';
+import 'package:pipecheck/data/definitions/badge.dart';
+import 'package:pipecheck/data/definitions/post.dart';
+import 'package:pipecheck/data/generated/models/badge.model.dart';
+import 'package:pipecheck/data/generated/models/post.model.dart';
+import 'package:pipecheck/data/generated/repositories/badge.repository.dart';
+import 'package:pipecheck/data/generated/repositories/post.repository.dart';
+import 'package:pipecheck/data/generated/repositories/user.repository.dart';
+import 'package:pipecheck/domain/models/action_result.dart';
 
 /// 게시글 관련 액션들을 처리하는 도메인 클래스
 class PostActions {

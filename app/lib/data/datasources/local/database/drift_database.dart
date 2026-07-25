@@ -1,5 +1,5 @@
-import 'package:boilerplate/data/datasources/database_datasource.dart';
-import 'package:boilerplate/data/datasources/local/database/database.dart';
+import 'package:pipecheck/data/datasources/database_datasource.dart';
+import 'package:pipecheck/data/datasources/local/database/database.dart';
 import 'package:drift/drift.dart';
 import 'package:utils/utils.dart';
 

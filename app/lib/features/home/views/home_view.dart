@@ -1,10 +1,10 @@
-import 'package:boilerplate/core/widgets/buttons/adaptive_button.dart';
-import 'package:boilerplate/core/widgets/buttons/icon_buttons.dart';
-import 'package:boilerplate/core/widgets/loading/loading_indicator.dart';
-import 'package:boilerplate/core/widgets/navigation/adaptive_app_bar.dart';
-import 'package:boilerplate/features/home/view_models/home_view_model.dart';
+import 'package:pipecheck/core/widgets/buttons/adaptive_button.dart';
+import 'package:pipecheck/core/widgets/buttons/icon_buttons.dart';
+import 'package:pipecheck/core/widgets/loading/loading_indicator.dart';
+import 'package:pipecheck/core/widgets/navigation/adaptive_app_bar.dart';
+import 'package:pipecheck/features/home/view_models/home_view_model.dart';
 import 'package:flutter/material.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 홈 화면 뷰

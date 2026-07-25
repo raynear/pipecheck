@@ -1,4 +1,4 @@
-import 'package:boilerplate/features/home/models/home_model.dart';
+import 'package:pipecheck/features/home/models/home_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/test_helpers.dart';

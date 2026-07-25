@@ -4,7 +4,7 @@
 ///
 /// 사용 예시:
 /// ```dart
-/// import 'package:boilerplate/core/responsive/index.dart';
+/// import 'package:pipecheck/core/responsive/index.dart';
 ///
 /// // Extension 사용
 /// if (context.isTablet) {

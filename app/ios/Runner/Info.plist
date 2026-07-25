@@ -5,14 +5,14 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>task-identifier</string>
-		<string>com.raynear.boilerplate.iOSBackgroundAppRefresh</string>
+		<string>com.raynear.pipecheck.iOSBackgroundAppRefresh</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>PipeCheck</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -31,7 +31,7 @@
 		<string>de</string>
 	</array>
 	<key>CFBundleName</key>
-	<string>habit</string>
+	<string>PipeCheck</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

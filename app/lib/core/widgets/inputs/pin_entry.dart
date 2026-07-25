@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:boilerplate/core/services/pin_service.dart' show kPinLength;
+import 'package:pipecheck/core/services/pin_service.dart' show kPinLength;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';

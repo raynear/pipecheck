@@ -1,6 +1,6 @@
 builders:
   table_generator:
-    import: "package:boilerplate/data/table_generator/builder.dart"
+    import: "package:pipecheck/data/table_generator/builder.dart"
     builder_factories: ["tableGeneratorBuilder"]
     build_extensions: 
       ".dart":
@@ -22,7 +22,7 @@ builders:
 targets:
   $default:
     builders:
-      boilerplate:table_generator:
+      pipecheck:table_generator:
         enabled: true
         options:
           # 추가 옵션들

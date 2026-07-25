@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 
 /// 업데이트 후 '새로운 기능' 안내 다이얼로그 (P2-24).
 ///

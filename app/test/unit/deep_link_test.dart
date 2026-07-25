@@ -3,8 +3,8 @@
 // DeepLinkService 자체는 app_links 플랫폼 채널에 의존해 단위 테스트에서 제외.
 // 실제 라우팅 로직(deepLinkLocation 순수 함수)과 플래그 배선만 고정한다.
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/router.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/router.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

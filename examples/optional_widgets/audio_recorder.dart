@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart' as flutter_sound;
 import 'package:logger/logger.dart' show Level;

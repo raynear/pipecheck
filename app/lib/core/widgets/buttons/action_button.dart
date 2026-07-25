@@ -1,4 +1,4 @@
-import 'package:boilerplate/core/widgets/buttons/analytics_buttons.dart';
+import 'package:pipecheck/core/widgets/buttons/analytics_buttons.dart';
 import 'package:flutter/material.dart';
 
 /// 재사용 가능한 액션 버튼

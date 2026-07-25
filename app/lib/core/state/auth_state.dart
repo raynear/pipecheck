@@ -1,8 +1,8 @@
 import 'package:authentication/authentication.dart';
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/authentication_service.dart';
-import 'package:boilerplate/core/state/settings.dart';
-import 'package:boilerplate/data/generated/repositories/user.repository.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/authentication_service.dart';
+import 'package:pipecheck/core/state/settings.dart';
+import 'package:pipecheck/data/generated/repositories/user.repository.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';

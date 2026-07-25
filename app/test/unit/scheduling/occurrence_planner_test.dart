@@ -4,8 +4,8 @@
 // 재발명한 2-패스 공정 채움 알고리즘을 도메인 비결합으로 이식. 생성기를 주입해
 // tz 없이 순수 검증(합성 발화 리스트).
 
-import 'package:boilerplate/core/services/scheduling/occurrence_planner.dart';
-import 'package:boilerplate/core/services/scheduling/reminder_recurrence.dart';
+import 'package:pipecheck/core/services/scheduling/occurrence_planner.dart';
+import 'package:pipecheck/core/services/scheduling/reminder_recurrence.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

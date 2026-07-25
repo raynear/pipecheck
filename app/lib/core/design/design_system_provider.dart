@@ -1,8 +1,8 @@
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/design/bold_minimalism/bold_theme.dart';
-import 'package:boilerplate/core/design/design_system.dart';
-import 'package:boilerplate/core/design/material3/material3_theme.dart';
-import 'package:boilerplate/core/state/settings.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/design/bold_minimalism/bold_theme.dart';
+import 'package:pipecheck/core/design/design_system.dart';
+import 'package:pipecheck/core/design/material3/material3_theme.dart';
+import 'package:pipecheck/core/state/settings.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

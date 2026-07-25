@@ -1,8 +1,8 @@
-import 'package:boilerplate/config/app_config.dart';
-import 'package:boilerplate/core/services/in_app_purchase_service.dart';
-import 'package:boilerplate/core/widgets/buttons/adaptive_button.dart';
-import 'package:boilerplate/core/widgets/buttons/analytics_buttons.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/config/app_config.dart';
+import 'package:pipecheck/core/services/in_app_purchase_service.dart';
+import 'package:pipecheck/core/widgets/buttons/adaptive_button.dart';
+import 'package:pipecheck/core/widgets/buttons/analytics_buttons.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

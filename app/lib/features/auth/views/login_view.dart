@@ -1,8 +1,8 @@
-import 'package:boilerplate/core/services/snackbar_service.dart';
-import 'package:boilerplate/core/widgets/buttons/adaptive_button.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
-import 'package:boilerplate/core/widgets/navigation/adaptive_app_bar.dart';
-import 'package:boilerplate/features/auth/view_models/auth_view_model.dart';
+import 'package:pipecheck/core/services/snackbar_service.dart';
+import 'package:pipecheck/core/widgets/buttons/adaptive_button.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/navigation/adaptive_app_bar.dart';
+import 'package:pipecheck/features/auth/view_models/auth_view_model.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

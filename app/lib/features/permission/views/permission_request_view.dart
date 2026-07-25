@@ -4,10 +4,10 @@
 // 어떤 권한을 요구할지 리스트를 받아올꺼야.
 // 그 리스트와 설명을 아이콘과 텍스트로 예쁘게 보여주고 버튼을 누르면 권한 요청이 되도록 할꺼야. 거부할 수도 있어야 해.
 // 거부하는 경우에는 context.pop(false)로 거부하고 페이지를 빠져나올꺼야.
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/notification/notification.dart';
-import 'package:boilerplate/core/widgets/buttons/adaptive_button.dart';
-import 'package:boilerplate/core/widgets/loading/loading_indicator.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/notification/notification.dart';
+import 'package:pipecheck/core/widgets/buttons/adaptive_button.dart';
+import 'package:pipecheck/core/widgets/loading/loading_indicator.dart';
 import 'package:collection/collection.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';

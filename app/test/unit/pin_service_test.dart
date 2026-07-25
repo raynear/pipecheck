@@ -4,8 +4,8 @@
 // 플러그인 없이 인메모리 가짜 저장소로 검증한다. 잠금 시각 계산은 주입한
 // clock으로 결정적으로 검증한다(시계 조작 시나리오 포함).
 
-import 'package:boilerplate/core/services/pin_service.dart';
-import 'package:boilerplate/core/services/secure_store.dart';
+import 'package:pipecheck/core/services/pin_service.dart';
+import 'package:pipecheck/core/services/secure_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeSecureStore implements SecureStore {

@@ -1,5 +1,5 @@
-import 'package:boilerplate/data/datasources/database_datasource.dart';
-import 'package:boilerplate/data/datasources/local/database/drift_database.dart';
+import 'package:pipecheck/data/datasources/database_datasource.dart';
+import 'package:pipecheck/data/datasources/local/database/drift_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 데이터베이스 Provider (일반화된 인터페이스)

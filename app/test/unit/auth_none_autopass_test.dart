@@ -1,6 +1,6 @@
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/state/auth_state.dart';
-import 'package:boilerplate/core/state/settings.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/state/auth_state.dart';
+import 'package:pipecheck/core/state/settings.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/test_helpers.dart';

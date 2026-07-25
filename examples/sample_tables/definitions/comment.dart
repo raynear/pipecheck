@@ -1,4 +1,4 @@
-import 'package:boilerplate/data/table_generator/annotations.dart';
+import 'package:pipecheck/data/table_generator/annotations.dart';
 
 /// 댓글 모델 예제 - 자기 참조(대댓글) 포함
 @GenerateTable()

@@ -13,7 +13,7 @@
 // 건드리지 않고 즉시 실패값을 반환한다(배경/미설정 경로 no-op). _client 호출이
 // throw하면 로깅 후 실패값 반환(INV-H2 — 앱 흐름 비차단).
 
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:utils/utils.dart';
 
@@ -68,9 +68,9 @@ class HomeWidgetService {
 
   /// App Group ID — 메인 앱/위젯 확장 entitlement와 **정확히 일치**해야 한다
   /// (INV-H1, home_widget_app_group_contract_test.dart가 3자 일치를 강제).
-  /// 값은 iOS 번들 ID(com.raynear.boilerplate)에 맞춘 placeholder이며 ./init의
+  /// 값은 iOS 번들 ID(com.raynear.pipecheck)에 맞춘 placeholder이며 ./init의
   /// 리네임이 세 위치를 함께 바꾼다.
-  static const String appGroupId = 'group.com.raynear.boilerplate';
+  static const String appGroupId = 'group.com.raynear.pipecheck';
 
   /// Android receiver 클래스명(AndroidManifest.xml)과 일치해야 함.
   static const String androidWidgetName = 'HomeWidgetReceiver';

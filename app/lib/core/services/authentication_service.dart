@@ -1,5 +1,5 @@
 import 'package:biometric_auth/biometric_auth.dart';
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:utils/utils.dart';
 

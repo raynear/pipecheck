@@ -1,4 +1,4 @@
-import 'package:boilerplate/data/table_generator/annotations.dart';
+import 'package:pipecheck/data/table_generator/annotations.dart';
 
 enum BadgeType { achievementCount, consecutive, total, first, special, retry }
 

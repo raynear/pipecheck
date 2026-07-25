@@ -1,6 +1,6 @@
 // isPinAuthEnabled 플래그 배선 테스트 (P2-23h ②).
 
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

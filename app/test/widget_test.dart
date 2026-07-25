@@ -4,9 +4,9 @@
 // 실패했다. 대신 부팅 배선이 깨지지 않는지를 검증한다:
 // ProviderScope 컨테이너에서 라우터/테마 프로바이더가 조립되는지.
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/design/design_system_provider.dart';
-import 'package:boilerplate/core/router.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/design/design_system_provider.dart';
+import 'package:pipecheck/core/router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

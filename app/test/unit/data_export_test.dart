@@ -7,8 +7,8 @@
 
 import 'dart:convert';
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/data_export_service.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/data_export_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

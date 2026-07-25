@@ -4,8 +4,8 @@
 // 테스트 환경에서도 두 no-op 경로(플래그 OFF / RC 미초기화 fail-open)가
 // 정상 사용자를 가두지 않음을 고정한다.
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/maintenance_service.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/maintenance_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

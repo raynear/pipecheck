@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:boilerplate/config/app_config.dart';
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/services/snackbar_service.dart';
-import 'package:boilerplate/core/state/settings.dart';
+import 'package:pipecheck/config/app_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/snackbar_service.dart';
+import 'package:pipecheck/core/state/settings.dart';
 import 'package:collection/collection.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

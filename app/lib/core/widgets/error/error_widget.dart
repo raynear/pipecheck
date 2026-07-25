@@ -1,6 +1,6 @@
-import 'package:boilerplate/core/design/design.dart';
+import 'package:pipecheck/core/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 
 /// 기본 에러 위젯
 class AppErrorWidget extends StatelessWidget {

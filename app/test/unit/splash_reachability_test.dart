@@ -5,9 +5,9 @@
 // 도달 불가. 이 테스트는 첫 프레임에 SplashView가 실제로 그려지고,
 // 스플래시 지연 후 자체 네비게이션으로 떠나는 것을 고정한다.
 
-import 'package:boilerplate/config/app_feature_config.dart';
-import 'package:boilerplate/core/router.dart';
-import 'package:boilerplate/features/splash/index.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/router.dart';
+import 'package:pipecheck/features/splash/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

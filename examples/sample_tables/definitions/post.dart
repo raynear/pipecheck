@@ -1,4 +1,4 @@
-import 'package:boilerplate/data/table_generator/annotations.dart';
+import 'package:pipecheck/data/table_generator/annotations.dart';
 
 /// 블로그 포스트 모델 예제
 ///

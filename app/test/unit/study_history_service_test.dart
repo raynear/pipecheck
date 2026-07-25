@@ -4,8 +4,8 @@
 // 저장은 KV 스토어(StudyHistoryStore)로 주입 — SharedPreferences 플러그인 없이
 // 검증한다. "지금"(clock)도 주입해 스트릭까지 결정적으로 테스트한다.
 
-import 'package:boilerplate/core/services/study_history/session_record.dart';
-import 'package:boilerplate/core/services/study_history/study_history_service.dart';
+import 'package:pipecheck/core/services/study_history/session_record.dart';
+import 'package:pipecheck/core/services/study_history/study_history_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// 플러그인 프리 인메모리 스토어.

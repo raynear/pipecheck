@@ -1,8 +1,8 @@
 // lib/database.dart
 import 'dart:io';
 
-import 'package:boilerplate/data/generated/drift/badge.drift.dart';
-import 'package:boilerplate/data/generated/drift/user.drift.dart';
+import 'package:pipecheck/data/generated/drift/badge.drift.dart';
+import 'package:pipecheck/data/generated/drift/user.drift.dart';
 import 'package:drift/drift.dart';
 import 'package:drift_sqflite/drift_sqflite.dart';
 import 'package:path/path.dart' as p;

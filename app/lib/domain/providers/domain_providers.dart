@@ -1,8 +1,8 @@
-import 'package:boilerplate/core/services/notification/notification.dart';
-import 'package:boilerplate/core/services/snackbar_service.dart';
-import 'package:boilerplate/data/generated/repositories/badge.repository.dart';
-import 'package:boilerplate/data/generated/repositories/user.repository.dart';
-import 'package:boilerplate/domain/actions/auth_actions.dart';
+import 'package:pipecheck/core/services/notification/notification.dart';
+import 'package:pipecheck/core/services/snackbar_service.dart';
+import 'package:pipecheck/data/generated/repositories/badge.repository.dart';
+import 'package:pipecheck/data/generated/repositories/user.repository.dart';
+import 'package:pipecheck/domain/actions/auth_actions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// NotificationService Provider

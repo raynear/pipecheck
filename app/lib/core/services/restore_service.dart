@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:boilerplate/data/core/repositories/repository_providers.dart';
+import 'package:pipecheck/data/core/repositories/repository_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 백업 복원 결과 요약.

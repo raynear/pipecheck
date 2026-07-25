@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:boilerplate/core/services/snackbar_service.dart';
+import 'package:pipecheck/core/services/snackbar_service.dart';
 import 'package:firebase_services/firebase_services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

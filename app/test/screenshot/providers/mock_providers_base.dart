@@ -1,7 +1,7 @@
 /// Mock Providers Base Classes
 library;
 
-import 'package:boilerplate/core/state/settings.dart';
+import 'package:pipecheck/core/state/settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

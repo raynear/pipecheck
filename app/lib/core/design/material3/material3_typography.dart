@@ -1,5 +1,5 @@
-import 'package:boilerplate/core/design/design_system.dart';
-import 'package:boilerplate/core/design/material3/material3_colors.dart';
+import 'package:pipecheck/core/design/design_system.dart';
+import 'package:pipecheck/core/design/material3/material3_colors.dart';
 import 'package:flutter/material.dart';
 
 /// Material3 타이포그래피 시스템

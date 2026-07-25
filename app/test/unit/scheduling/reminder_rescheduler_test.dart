@@ -4,9 +4,9 @@
 // "계획 → 차분 → 취소/추가" 동기화. 순수 diff(computeReminderDiff)와, ReminderSink
 // (알림 플러그인 추상화) 뒤의 얇은 서비스로 나눠 tz/플러그인 없이 검증한다.
 
-import 'package:boilerplate/core/services/scheduling/occurrence_planner.dart';
-import 'package:boilerplate/core/services/scheduling/reminder_recurrence.dart';
-import 'package:boilerplate/core/services/scheduling/reminder_rescheduler.dart';
+import 'package:pipecheck/core/services/scheduling/occurrence_planner.dart';
+import 'package:pipecheck/core/services/scheduling/reminder_recurrence.dart';
+import 'package:pipecheck/core/services/scheduling/reminder_rescheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;

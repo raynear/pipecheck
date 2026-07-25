@@ -1,7 +1,7 @@
-import 'package:boilerplate/core/design/design.dart';
-import 'package:boilerplate/core/widgets/lists/adaptive_list_tile.dart';
+import 'package:pipecheck/core/design/design.dart';
+import 'package:pipecheck/core/widgets/lists/adaptive_list_tile.dart';
 import 'package:flutter/material.dart';
-import 'package:boilerplate/core/widgets/common/semantics.dart';
+import 'package:pipecheck/core/widgets/common/semantics.dart';
 
 /// 스와이프 가능한 리스트 아이템
 class SwipeableListItem extends StatelessWidget {

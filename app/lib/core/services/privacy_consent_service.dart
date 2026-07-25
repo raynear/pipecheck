@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:firebase_services/firebase_services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:orange/orange.dart';

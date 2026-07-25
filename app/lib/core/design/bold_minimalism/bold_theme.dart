@@ -1,7 +1,7 @@
-import 'package:boilerplate/core/design/bold_minimalism/bold_colors.dart';
-import 'package:boilerplate/core/design/bold_minimalism/bold_spacing.dart';
-import 'package:boilerplate/core/design/bold_minimalism/bold_typography.dart';
-import 'package:boilerplate/core/design/design_system.dart';
+import 'package:pipecheck/core/design/bold_minimalism/bold_colors.dart';
+import 'package:pipecheck/core/design/bold_minimalism/bold_spacing.dart';
+import 'package:pipecheck/core/design/bold_minimalism/bold_typography.dart';
+import 'package:pipecheck/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// Bold Minimalism 디자인 시스템

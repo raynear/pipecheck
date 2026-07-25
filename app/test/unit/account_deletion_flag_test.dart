@@ -4,7 +4,7 @@
 // 컴플라이언스 플래그라 기본 ON(opt-out)이어야 하고, 인증 자체가 꺼지면
 // 함께 꺼져야 한다.
 
-import 'package:boilerplate/config/app_feature_config.dart';
+import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
