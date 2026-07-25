@@ -1,0 +1,11 @@
+{
+  "app_name": "PipeCheck",
+  "package_name": "com.raynear.pipecheck",
+  "created_at": "2026-07-25T06:26:46Z",
+  "phase": "Phase 1",
+  "status": "development",
+  "store": {
+    "ios": "not_submitted",
+    "android": "not_submitted"
+  }
+}

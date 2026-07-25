@@ -5,12 +5,12 @@
 # 보일러플레이트 공통 설정은 app_config.yaml을 참고하세요.
 
 project:
-  name: "My App"
+  name: "PipeCheck"
   # company_name → app_config.yaml (앱마다 동일)
-  package_name: "com.example.myapp"
+  package_name: "com.raynear.pipecheck"
   description: "A great app built with Flutter"
   version: "0.0.1"
-  github_repository: "your-org/myapp"     # e.g., "owner/repo"
+  github_repository: "raynear/pipecheck"
 
   # ── 카테고리 (iOS App Store / Google Play 공통) ──
   # 아래 목록에서 선택:
