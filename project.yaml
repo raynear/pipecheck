@@ -49,7 +49,7 @@ age_rating:
 #                    && git add fastlane && 커밋 (fastlane_ref도 같은 태그로 갱신).
 # URL 오버라이드: FASTLANE_REPO 환경변수.
 tooling:
-  fastlane_ref: "v0.2.13"
+  fastlane_ref: "v0.2.51"
   # 파생 앱의 CLI 활성화 핀 (P1-10):
   #   dart pub global activate --source git \
   #     --git-url https://github.com/raynear/boiler_plate.git \
