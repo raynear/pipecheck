@@ -16,13 +16,13 @@ import 'package:flutter/material.dart';
 class AuthActions {
   final UserRepository _userRepository;
   final BadgeRepository _badgeRepository;
-  final NotificationService _notificationService;
+  final RaynearNotification _notificationService;
   final SnackBarService _snackbarService;
 
   AuthActions({
     required UserRepository userRepository,
     required BadgeRepository badgeRepository,
-    required NotificationService notificationService,
+    required RaynearNotification notificationService,
     required SnackBarService snackbarService,
   })  : _userRepository = userRepository,
         _badgeRepository = badgeRepository,

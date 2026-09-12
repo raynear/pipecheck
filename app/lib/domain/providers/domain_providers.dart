@@ -5,10 +5,7 @@ import 'package:pipecheck/data/generated/repositories/user.repository.dart';
 import 'package:pipecheck/domain/actions/auth_actions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// NotificationService Provider
-final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService();
-});
+// notificationServiceProvider는 알림 배럴이 준다 (#232) — 여기 재선언 금지.
 
 /// AuthActions Provider
 final authActionsProvider = Provider<AuthActions>((ref) {
