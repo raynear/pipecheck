@@ -236,7 +236,7 @@ tools/
 chmod +x run
 
 # 또는 dart로 직접 실행
-dart run tools/cli/bin/init.dart
+dart run tools/cli/bin/bp.dart init
 ```
 
 ### SDK 버전 오류

@@ -137,14 +137,14 @@ String applyAppConfigFeature(String content, String featureKey, bool value) {
 
 /// app_config.yaml 변경 후 런타임 env 산출물을 재생성한다.
 ///
-/// `tools/cli/bin/gen_env.dart`를 spawn한다(bootstrap.runFeatureCli와 동일한
+/// `./run gen-env`를 spawn한다(bootstrap.runFeatureCli와 동일한
 /// 스타일). gen_env가 `features:` 블록을 `FF_*` 키로 방출해야 토글이 실제로
 /// 적용되므로, 실패 시 사용자에게 `./build` 수동 실행을 안내한다.
 Future<void> regenerateEnv() async {
   try {
     final result = await Process.run(
-      'dart',
-      ['run', 'tools/cli/bin/gen_env.dart'],
+      './run',
+      ['gen-env'],
       workingDirectory: getProjectRoot(),
     );
     if (result.exitCode != 0) {

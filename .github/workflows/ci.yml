@@ -91,8 +91,7 @@ jobs:
 
       - name: Generate runtime env artifacts
         run: |
-          (cd tools/cli && dart pub get)
-          dart run tools/cli/bin/gen_env.dart
+          ./run gen-env
 
       - name: Setup Keychain
         run: |
@@ -185,8 +184,7 @@ jobs:
 
       - name: Generate runtime env artifacts
         run: |
-          (cd tools/cli && dart pub get)
-          dart run tools/cli/bin/gen_env.dart
+          ./run gen-env
 
       - name: Set up Android keystore
         env:

@@ -403,7 +403,7 @@ permission denied: ./setup
 chmod +x init setup build deploy feature preflight run
 
 # 또는 dart로 직접 실행
-dart run tools/cli/bin/setup.dart
+dart run tools/cli/bin/bp.dart setup
 ```
 
 ### 명령어를 찾을 수 없음
