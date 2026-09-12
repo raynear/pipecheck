@@ -208,8 +208,8 @@ fi
 
 # init.dart로 내부 치환 수행
 info "init.dart 실행 중..."
-(cd "$TARGET_DIR" && dart run tools/cli/bin/init.dart --name "$APP_NAME" --package "$PACKAGE_NAME") || {
-  warn "init.dart 실행 실패 — 수동으로 실행 필요: cd $TARGET_DIR && dart run tools/cli/bin/init.dart --name \"$APP_NAME\" --package \"$PACKAGE_NAME\""
+(cd "$TARGET_DIR" && ./run init --name "$APP_NAME" --package "$PACKAGE_NAME") || {
+  warn "init 실행 실패 — 수동으로 실행 필요: cd $TARGET_DIR && ./run init --name \"$APP_NAME\" --package \"$PACKAGE_NAME\""
 }
 
 step_done 2

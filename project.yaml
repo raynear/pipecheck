@@ -49,13 +49,11 @@ age_rating:
 #                    && git add fastlane && 커밋 (fastlane_ref도 같은 태그로 갱신).
 # URL 오버라이드: FASTLANE_REPO 환경변수.
 tooling:
-  fastlane_ref: "v0.2.51"
-  # 파생 앱의 CLI 활성화 핀 (P1-10):
-  #   dart pub global activate --source git \
-  #     --git-url https://github.com/raynear/boiler_plate.git \
-  #     --git-path tools/cli --git-ref <cli_ref>
+  fastlane_ref: "v0.2.67"
+  # `tools/cli` 핀 — tools/cli/pubspec.yaml git dep의 ref:와 같이 올릴 것 (W3-18).
+  # 절차: boiler_plate docs/reference/maintainer/DERIVED_APP_UPDATES.md §4.5
+  cli_ref: "cli-v1.3.7"
   # 템플릿 본체는 path 실행(./run) 유지. v* 태그는 배포 게이트라 cli-v* 네임스페이스 사용.
-  cli_ref: "cli-v1.0.0"
   # 템플릿 버전 — scripts/sync-to-apps가 파생 앱의 template.lock에 기록.
   # 릴리즈 시 CHANGELOG의 [Unreleased]를 버전 섹션으로 옮기고 template-v* 태그와 함께 갱신.
   template_version: "template-v1.0.0"
