@@ -9,5 +9,5 @@ dependencies:
   boilerplate_cli:
     git:
       url: https://github.com/raynear/boiler_plate.git
-      ref: cli-v1.3.7
+      ref: cli-v1.3.9
       path: tools/cli
