@@ -5,6 +5,7 @@ import 'package:pipecheck/data/generated/drift/badge.drift.dart';
 import 'package:pipecheck/data/generated/drift/user.drift.dart';
 import 'package:drift/drift.dart';
 import 'package:drift_sqflite/drift_sqflite.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:utils/utils.dart';
@@ -47,6 +48,13 @@ class AppDatabase extends _$AppDatabase {
   // private 생성자를 사용하여 직접적인 인스턴스 생성을 막음
   AppDatabase._internal() : super(_openConnection());
 
+
+  /// 테스트 전용 주입 경로 — 실행기를 갈아끼운 **별도** 인스턴스를 만든다.
+  ///
+  /// 싱글톤(`_instance`)에는 손대지 않으므로 프로덕션 경로는 그대로다.
+  /// 보통 `AppDatabase.forTesting(NativeDatabase.memory())`로 쓴다.
+  @visibleForTesting
+  AppDatabase.forTesting(super.executor);
   @override
   int get schemaVersion => 1;
 

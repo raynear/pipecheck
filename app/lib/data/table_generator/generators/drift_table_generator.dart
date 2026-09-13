@@ -2,6 +2,27 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:source_gen/source_gen.dart';
 
+/// `IdStrategy.uuid` 기본키에 심는 **SQLite용** RFC 4122 v4 생성 식.
+///
+/// SQLite에는 UUID 생성 함수가 없다. 예전에 쓰던 Postgres의 `gen_random_uuid()`는
+/// SQLite에서 `CREATE TABLE`은 통과하지만(DEFAULT 식의 함수는 그때 해석되지 않는다)
+/// **id를 생략한 첫 INSERT에서 `unknown function: gen_random_uuid()`로 터진다** —
+/// 스키마가 멀쩡해 보여서 조용히 깨지는 종류다. Supabase/Postgres 경로는
+/// P1-16.5a에서 철거됐으므로 SQLite 내장 함수만으로 만든다.
+///
+/// `randomblob`으로 랜덤 바이트를 뽑고 버전(4)·variant(8/9/a/b) 니블을 고정한다.
+/// 실측(sqlite3 3.x): `CREATE TABLE` + `INSERT` 후 서로 다른 v4 UUID가 나온다.
+///
+/// variant 니블은 `abs(random())%4`가 **아니라** `random()&3`으로 고른다 —
+/// `random()`이 `-9223372036854775808`을 내면 `abs()`가
+/// `Error: stepping, integer overflow`로 **INSERT를 죽인다**(sqlite3 3.51 실측).
+/// 확률이 2^-64라 테스트로는 절대 못 잡고, 비트마스크는 오버플로도 편향도 없다.
+const String sqliteUuidV4Expression =
+    "lower(hex(randomblob(4))||'-'||hex(randomblob(2))||'-4'"
+    "||substr(hex(randomblob(2)),2)||'-'"
+    "||substr('89ab',(random()&3)+1,1)"
+    "||substr(hex(randomblob(2)),2)||'-'||hex(randomblob(6)))";
+
 /// Drift 테이블 코드를 생성하는 클래스
 class DriftTableGenerator {
   String generate(
@@ -106,7 +127,11 @@ class DriftTableGenerator {
         buffer.write('.autoIncrement()');
       } else if (strategyIndex == 0) {
         // uuid
-        buffer.write('.withDefault(const CustomExpression(\'gen_random_uuid()\'))');
+        // uuid — SQLite 내장 함수로 v4 생성 (근거는 sqliteUuidV4Expression).
+        // 식에 작은따옴표가 들어 있어 방출 리터럴은 큰따옴표로 감싼다.
+        buffer.write(
+          '.withDefault(const CustomExpression("$sqliteUuidV4Expression"))',
+        );
       }
     }
 
