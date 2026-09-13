@@ -13,8 +13,8 @@ packages:
     dependency: "direct main"
     description:
       path: "tools/cli"
-      ref: "cli-v1.3.7"
-      resolved-ref: b4846a668c5b7d5f3f42d90a889a56c3484a4179
+      ref: "cli-v1.3.9"
+      resolved-ref: e5835fc5c0c0b353e4d4307552449e595e67659d
       url: "https://github.com/raynear/boiler_plate.git"
     source: git
     version: "1.0.0"
