@@ -1,5 +1,8 @@
 # Uncomment this line to define a global platform for your project
-platform :ios, '15.0'
+# pod 배포 타깃의 SSOT. 아래 post_install이 이 값을 그대로 쓴다 — 두 군데에
+# 숫자를 적으면 어긋나고, 실제로 어긋나 있었다(여기 15.0 / post_install 12.0).
+IOS_DEPLOYMENT_TARGET = '15.0'
+platform :ios, IOS_DEPLOYMENT_TARGET
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -48,10 +51,13 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     
-    # Fix deployment target warnings
+    # pod의 배포 타깃을 위 상수까지 끌어올린다. 하한 미만인 pod이 하나라도 남으면
+    # Xcode가 Target Integrity로 **빌드 전체를 죽인다**(경고가 아니다).
+    # 비교 대상은 반드시 상수일 것 — 숫자를 직접 적어 실제로 어긋나 있었다(12.0 vs 15.0).
     target.build_configurations.each do |config|
-      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 12.0
-        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f <
+         IOS_DEPLOYMENT_TARGET.to_f
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = IOS_DEPLOYMENT_TARGET
       end
     end
 

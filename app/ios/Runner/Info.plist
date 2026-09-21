@@ -64,6 +64,29 @@
 	<string>This app needs permission to save photos to your photo library for habit review memories.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This app uses tracking data to provide personalized ads and improve your experience.</string>
+	<!-- 없으면 iOS 26+에서 실행 직후 강제 종료된다.
+	     근거와 가드: app/test/unit/ios_scene_lifecycle_test.dart -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
