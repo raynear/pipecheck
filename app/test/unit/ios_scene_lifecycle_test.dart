@@ -96,28 +96,45 @@ void main() {
       final name = RegExp(
         r'^\$\(PRODUCT_MODULE_NAME\)\.(\w+)$',
       ).firstMatch(declared!)!.group(1)!;
-      final src = File('ios/Runner/$name.swift');
+      // **클래스가 같은 이름의 파일에 있을 의무는 없다.** Swift는 그걸 요구하지
+      // 않고, 실제로 파생 앱 하나는 이 클래스를 AppDelegate.swift 안에 선언해 둔
+      // 채 정상 동작했다 — 파일명으로 찾으면 멀쩡한 앱을 빨갛게 만든다.
+      //
+      // 그래서 선언을 찾되 **두 조건을 함께** 건다. 하나만으론 각각 뚫린다:
+      //   • 주석을 안 걷으면 옮기면서 남긴 `// class SceneDelegate: …` 한 줄로
+      //     통과한다 — 이 레포들의 습관이라 가설이 아니다(실측).
+      //   • 컴파일 여부를 안 보면 Runner Sources 밖 파일의 선언으로 통과한다.
+      final compiled = RegExp(r'/\* ([^*]+\.swift) in Sources \*/')
+          .allMatches(sourcesFiles(pbxproj, 'Runner') ?? '')
+          .map((m) => m.group(1)!)
+          .toSet();
+      final decl = RegExp(
+        r'(?:@\w+\s+|public\s+|final\s+|internal\s+|open\s+)*'
+        'class\\s+$name\\s*:[^{]*\\bFlutterSceneDelegate\\b',
+      );
+      final owners = <String>[];
+      for (final e in Directory('ios/Runner').listSync(recursive: true)) {
+        if (e is! File || !e.path.endsWith('.swift')) continue;
+        if (decl.hasMatch(stripSwiftComments(e.readAsStringSync()))) {
+          owners.add(e.uri.pathSegments.last);
+        }
+      }
       expect(
-        src.existsSync(),
-        isTrue,
+        owners,
+        isNotEmpty,
         reason:
-            'ios/Runner/$name.swift가 없다 — 매니페스트가 존재하지 않는 '
-            '클래스를 지목하고 있다(빌드는 초록이다).',
+            'ios/Runner 아래 어디에도 `class $name: FlutterSceneDelegate` 선언이 '
+            '없다(주석 제외) — 매니페스트가 존재하지 않는 클래스를 지목하고 '
+            '있다. 빌드는 초록이고 iOS 26+에서만 죽는다.',
       );
-      // 선언으로 청구한다 — 이름만 찾으면 **주석에 적힌 한 번**으로 통과한다(실측).
+      // 모든 매치를 모아 판정한다 — 첫 매치에서 끊으면 listSync의 순서(정렬되지
+      // 않는다)에 판정이 달라져 같은 레포가 기계마다 다른 답을 낸다.
       expect(
-        RegExp(
-          'class\\s+$name\\s*:\\s*FlutterSceneDelegate\\b',
-        ).hasMatch(src.readAsStringSync()),
-        isTrue,
-        reason: 'FlutterSceneDelegate를 상속하지 않으면 엔진↔씬 배선이 없다.',
-      );
-      // 컴파일되지 않으면 매니페스트가 지목한 클래스가 런타임에 없다.
-      // 파일 존재만 보면 pbxproj에서 빠진 상태를 통과시킨다(이슈 #234의 모양).
-      expect(
-        sourcesFiles(pbxproj, 'Runner'),
-        contains('/* $name.swift in Sources */'),
-        reason: '$name.swift가 Runner 타겟에서 컴파일되지 않는다.',
+        owners.where(compiled.contains),
+        isNotEmpty,
+        reason:
+            '$name을 선언한 파일($owners) 중 Runner 타겟에서 컴파일되는 것이 '
+            '없다 — 클래스가 바이너리에 실리지 않는다.',
       );
     });
 

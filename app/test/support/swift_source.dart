@@ -27,3 +27,16 @@ String? swiftMethodBody(String source, String signaturePrefix) {
   }
   return null; // 닫히지 않았다 — 소스가 깨졌거나 잘린 것이다.
 }
+
+/// 줄 주석(`//`)과 블록 주석(`/* */`)을 걷어낸 사본.
+///
+/// 소스에서 선언을 찾는 검사는 이걸 먼저 통과시켜야 한다 — 이 레포들은 코드를
+/// 옮기면서 **옛 줄을 주석으로 남기는 습관**이 있어서, 주석을 안 걷으면
+/// `// class SceneDelegate: FlutterSceneDelegate {}` 한 줄이 남은 것만으로
+/// "클래스가 실재한다"가 통과한다(실측으로 확인된 거짓 PASS).
+///
+// ponytail: 문자열 리터럴 안의 `//`도 지운다. 선언을 찾는 용도라 무해하고,
+// 진짜 렉서가 필요해지면 그때 올린다.
+String stripSwiftComments(String source) => source
+    .replaceAll(RegExp(r'/\*[\s\S]*?\*/'), '')
+    .replaceAll(RegExp(r'//[^\n]*'), '');
