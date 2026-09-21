@@ -6,13 +6,11 @@ import awesome_notifications
 // Awesome Notification
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GeneratedPluginRegistrant.register(with: self)
-
     // Awesome Notifications
     // This function registers the desired plugins to be used within a notification background action
     SwiftAwesomeNotificationsPlugin.setPluginRegistrantCallback { registry in
@@ -26,5 +24,11 @@ import awesome_notifications
     //  해당 패키지를 켜는 포크는 examples/ 안내에 따라 재배선할 것)
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // UIScene 생명주기에서는 플러그인 등록이 여기로 온다 — didFinishLaunching 시점엔
+  // 암시적 엔진도 window도 아직 없다(씬 채택 후 AppDelegate.window는 항상 nil).
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
   }
 }
