@@ -70,7 +70,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
           _monthlyPrice = monthly.price;
           _yearlyPrice = yearly.price;
           _lifetimePrice = lifetime.price;
-          _yearlyDiscount = ref.read(inAppPurchaseServiceProvider)?.calculateDiscount(monthly.price, yearly.price, 12) ?? '0';
+          _yearlyDiscount = calculateDiscount(monthly.rawPrice, yearly.rawPrice, 12);
         });
       } catch (_) {
         // Products not loaded yet
@@ -222,56 +222,6 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Language selector button in top right
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surface.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: AdaptiveButton(
-                  label: 'Language',
-                  onPressed: () => _showLanguageSelector(context),
-                  variant: ButtonVariant.text,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.language,
-                        size: 20,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      SText(
-                        LocaleNamesLocalizationsDelegate
-                            .nativeLocaleNames[settings.language.toLanguageTag().replaceAll('-', '_')] ??
-                            'Language',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_drop_down,
-                        size: 20,
-                        color: colorScheme.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
             // Main content
             Column(
               children: [
@@ -364,6 +314,56 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                   ),
                 ),
               ],
+            ),
+
+            // Language selector button in top right — 본문 Column 위에 그려야 탭이 닿는다
+            Positioned(
+              top: 16,
+              right: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: AdaptiveButton(
+                  label: 'Language',
+                  onPressed: () => _showLanguageSelector(context),
+                  variant: ButtonVariant.text,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.language,
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      SText(
+                        LocaleNamesLocalizationsDelegate
+                            .nativeLocaleNames[settings.language.toLanguageTag().replaceAll('-', '_')] ??
+                            'Language',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_drop_down,
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -475,7 +475,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             _buildSubscriptionOption(
               'Yearly'.tr(),
               _yearlyPrice.isNotEmpty
-                  ? '{}/year ({}% off)'.tr(args: [_yearlyPrice, (100 * double.parse(_yearlyDiscount)).floor().toString()])
+                  ? '{}/year ({}% discount)'.tr(args: [_yearlyPrice, (100 * double.parse(_yearlyDiscount)).floor().toString()])
                   : 'Loading...'.tr(),
               'yearly',
             ),

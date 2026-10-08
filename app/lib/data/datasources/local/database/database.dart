@@ -5,7 +5,7 @@ import 'package:pipecheck/data/generated/drift/badge.drift.dart';
 import 'package:pipecheck/data/generated/drift/user.drift.dart';
 import 'package:drift/drift.dart';
 import 'package:drift_sqflite/drift_sqflite.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show kDebugMode, visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:utils/utils.dart';
@@ -98,7 +98,7 @@ LazyDatabase _openConnection() {
 
     return SqfliteQueryExecutor.inDatabaseFolder(
       path: file,
-      logStatements: true, // 디버깅을 위해 SQL 문을 로깅
+      logStatements: kDebugMode, // 디버그에서만 SQL 로깅 — 릴리스 로그에 사용자 데이터가 남지 않게
       singleInstance: true, // 단일 인스턴스 보장
     );
   });

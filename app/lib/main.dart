@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:pipecheck/config/app_config.dart';
 import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:pipecheck/core/design/design_system_provider.dart';
@@ -6,6 +8,7 @@ import 'package:pipecheck/core/router.dart';
 import 'package:pipecheck/core/services/badge_service.dart';
 import 'package:pipecheck/core/services/deep_link_service.dart';
 import 'package:pipecheck/core/services/force_update_service.dart';
+import 'package:pipecheck/core/services/in_app_purchase_service.dart';
 import 'package:pipecheck/core/services/maintenance_service.dart';
 import 'package:pipecheck/core/services/notification/notification.dart';
 import 'package:pipecheck/core/services/snackbar_service.dart';
@@ -18,6 +21,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:utils/utils.dart';
 
 /// 애플리케이션의 진입점입니다.
@@ -35,6 +39,8 @@ void main() async {
       (route) => rootNavigatorKey.currentContext?.go(route);
 
   final appConfig = await AppConfig().initialize();
+  // 개발 프리미엄 덮어쓰기는 디버그 또는 `-dev` 내부 배포 빌드에서만 인정한다.
+  devOverrideAllowed = kDebugMode || (await PackageInfo.fromPlatform()).version.contains('-dev');
   final systemLocale = WidgetsBinding.instance.platformDispatcher.locale;
   // languageCode 기준 매칭 — 정확일치(contains)는 country가 다른 기기 로케일
   // (예: 'ar-EG' vs 지원 'ar', 'en-GB' vs 'en-US')을 놓쳐 영어로 강제 폴백시켜
@@ -98,6 +104,9 @@ class MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // 부팅 때 IAP 서비스를 바로 만든다 — 앱이 꺼진 사이 도착한 거래를 받고 스토어 권리를 맞춘다.
+    ref.read(inAppPurchaseServiceProvider);
     
     // 알림 기능이 활성화된 경우에만 알림 서비스 사용
     if (AppFeatureConfig.isNotificationEnabled) {
@@ -256,6 +265,8 @@ class MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
     }
     if (state == AppLifecycleState.resumed) {
       logger.i('resumed');
+      // 갱신·해지·환불은 앱이 꺼진 사이에 일어난다 — 돌아올 때 스토어 기준으로 다시 맞춘다.
+      unawaited(ref.read(inAppPurchaseServiceProvider)?.refreshEntitlement());
       // 백그라운드 알림 제거 (메서드 내부에서 설정 확인)
       await _notification?.removeBackgroundNotification();
 

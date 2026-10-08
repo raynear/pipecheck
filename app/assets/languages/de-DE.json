@@ -818,5 +818,16 @@
     }
   },
   "• Purchases are made through your App Store account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.": "• Purchases are made through your App Store account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.",
-  "• Subscription will automatically renew unless canceled at least 24 hours before the end of the current period": "• Das Abonnement verlängert sich automatisch, wenn es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird"
+  "• Subscription will automatically renew unless canceled at least 24 hours before the end of the current period": "• Das Abonnement verlängert sich automatisch, wenn es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird",
+  "Purchase failed": "Kauf fehlgeschlagen",
+  "Failed to activate subscription": "Abo konnte nicht aktiviert werden",
+  "Unknown subscription type": "Unbekannte Abo-Art",
+  "{} activated": "{} aktiviert",
+  "Purchase restored successfully": "Kauf erfolgreich wiederhergestellt",
+  "No previous purchases found": "Keine früheren Käufe gefunden",
+  "Failed to restore purchase": "Kauf konnte nicht wiederhergestellt werden",
+  "Loading...": "Wird geladen...",
+  "Confirming your purchase. It will be applied shortly.": "Dein Kauf wird bestätigt. Er wird in Kürze übernommen.",
+  "Lifetime": "Lebenslang",
+  "Active": "Aktiv"
 }

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:pipecheck/config/app_config.dart';
 import 'package:pipecheck/core/design/design_system_provider.dart';
-import 'package:flutter/foundation.dart' show PlatformDispatcher;
+import 'package:flutter/foundation.dart' show PlatformDispatcher, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -98,6 +98,14 @@ abstract class Settings with _$Settings {
     required bool useReminder,
     @TimeOfDayConverter() required TimeOfDay reminderTime,
     DateTime? subscriptionExpiryDate,
+    // 평생 구매(비소모성) — 구독 만료일과 따로 둔다. 구독이 끝나도 평생은 남는다.
+    @Default(false) bool hasLifetime,
+    // 스토어가 만료일을 안 주는 구독(Google Play) — 날짜 없이, 성공한 스토어 조회가
+    // "소유 안 함"이라고 말할 때까지 활성이다.
+    @Default(false) bool subscriptionOpenEnded,
+    // 개발 확인용 프리미엄 덮어쓰기 — 실제 권리(hasLifetime·구독)와 완전히 별개이고,
+    // 스토어 재조회가 건드리지 않는다. devOverrideAllowed인 빌드에서만 효력이 있다.
+    @Default(false) bool devPremium,
     required int appLaunchCount,
     @Default(DesignSystemType.material3) DesignSystemType designSystem,
   }) = _Settings;
@@ -137,6 +145,10 @@ abstract class Settings with _$Settings {
               ? DateTime.parse(subscriptionExpiryDateString)
               : null;
 
+      final bool hasLifetime = Orange.getBool('hasLifetime') ?? false;
+      final bool subscriptionOpenEnded = Orange.getBool('subscriptionOpenEnded') ?? false;
+      final bool devPremium = Orange.getBool('devPremium') ?? false;
+
       final int appLaunchCount = Orange.getInt('appLaunchCount') ?? 0;
 
       final int designSystemIndex = Orange.getInt('designSystem') ?? 0;
@@ -156,6 +168,9 @@ abstract class Settings with _$Settings {
         useReminder: useReminder,
         reminderTime: reminderTime,
         subscriptionExpiryDate: subscriptionExpiryDate,
+        hasLifetime: hasLifetime,
+        subscriptionOpenEnded: subscriptionOpenEnded,
+        devPremium: devPremium,
         appLaunchCount: appLaunchCount,
         designSystem: designSystem,
       );
@@ -243,6 +258,9 @@ extension SettingsExtension on Settings {
       Orange.setInt('reminderHour', reminderTime.hour);
       Orange.setInt('reminderMinute', reminderTime.minute);
       Orange.setString('subscriptionExpiryDate', subscriptionExpiryDate?.toIso8601String() ?? '');
+      Orange.setBool('hasLifetime', hasLifetime);
+      Orange.setBool('subscriptionOpenEnded', subscriptionOpenEnded);
+      Orange.setBool('devPremium', devPremium);
       Orange.setInt('appLaunchCount', appLaunchCount);
       Orange.setInt('designSystem', designSystem.index);
     } catch (e) {
@@ -250,10 +268,46 @@ extension SettingsExtension on Settings {
     }
   }
 
-  bool get isSubscriptionActive {
-    return subscriptionExpiryDate != null && subscriptionExpiryDate!.isAfter(DateTime.now());
-  }
+  PremiumEntitlement get entitlement => PremiumEntitlement(
+        hasLifetime: hasLifetime,
+        subscriptionExpiry: subscriptionExpiryDate,
+        subscriptionOpenEnded: subscriptionOpenEnded,
+      );
+
+  // 열린 구독(Google Play)은 성공한 조회가 "소유 안 함"이라고 말할 때까지 날짜와 무관하게 활성.
+  bool get isSubscriptionActive => (devPremium && devOverrideAllowed) || entitlement.isActiveAt(DateTime.now());
 }
+
+/// 모든 권리를 합친 최종 프리미엄 상태. [subscriptionExpiry]는 스토어가 준 실제 만료일만
+/// 담는다. [subscriptionOpenEnded]는 만료일을 안 주는 구독을 보유 중이라는 뜻이다(날짜 없음).
+// ponytail: iOS 자동갱신 구독의 결제 재시도·오프라인 캐시 오차를 덮는 상수 1개. 상한 3일 —
+// Apple 결제 재시도 유예와 같은 자릿수이며, 그 이상은 환불 후 무료 이용을 늘린다.
+const subscriptionGracePeriod = Duration(days: 3);
+
+class PremiumEntitlement {
+  const PremiumEntitlement({
+    required this.hasLifetime,
+    required this.subscriptionExpiry,
+    this.subscriptionOpenEnded = false,
+  });
+
+  final bool hasLifetime;
+  final DateTime? subscriptionExpiry;
+  final bool subscriptionOpenEnded;
+
+  bool get hasSubscription => subscriptionOpenEnded || subscriptionExpiry != null;
+
+  /// 지금 시각 기준 활성 여부 — 열린 구독은 날짜와 무관, 날짜가 있으면 만료일 + [subscriptionGracePeriod]가 미래여야 한다.
+  /// 만료일이 있는 구독은 iOS뿐이다(Android 열린 구독은 날짜가 없다).
+  bool isActiveAt(DateTime now) =>
+      hasLifetime ||
+      subscriptionOpenEnded ||
+      (subscriptionExpiry?.add(subscriptionGracePeriod).isAfter(now) ?? false);
+}
+
+/// 개발 프리미엄 덮어쓰기를 인정하는 빌드인가 — 디버그 또는 `-dev` 접미사 내부 배포 빌드.
+/// 스토어 빌드에서는 저장된 devPremium 값이 있어도 효력이 없다. main()이 버전을 읽어 켠다.
+bool devOverrideAllowed = kDebugMode;
 
 // 지원되는 로케일 초기화 제공자
 final supportedLocalesProvider = FutureProvider<List<Locale>>((ref) async {
@@ -287,17 +341,6 @@ class SettingsNotifier extends Notifier<Settings> {
     logger.d('앱 실행 횟수: ${newSettings.appLaunchCount}');
   }
 
-  Future<void> clearSingleSetting({
-    bool? subscriptionExpiryDate,
-    bool? currentHabitExecution,
-  }) async {
-    if (subscriptionExpiryDate == true) {
-      await changeSettings(state.copyWith(
-        subscriptionExpiryDate: null,
-      ));
-    }
-  }
-
   Future<void> updateSingleSetting({
     bool? onBoard,
     ThemeMode? displayMode,
@@ -311,10 +354,9 @@ class SettingsNotifier extends Notifier<Settings> {
     bool? useNotification,
     bool? useReminder,
     TimeOfDay? reminderTime,
-    DateTime? subscriptionExpiryDate,
     DesignSystemType? designSystem,
   }) async {
-    final newSettings = Settings(
+    final newSettings = state.copyWith(
       onBoard: onBoard ?? state.onBoard,
       displayMode: displayMode ?? state.displayMode,
       themeColor: themeColor ?? state.themeColor,
@@ -327,8 +369,6 @@ class SettingsNotifier extends Notifier<Settings> {
       useNotification: useNotification ?? state.useNotification,
       useReminder: useReminder ?? state.useReminder,
       reminderTime: reminderTime ?? state.reminderTime,
-      subscriptionExpiryDate: subscriptionExpiryDate ?? state.subscriptionExpiryDate,
-      appLaunchCount: state.appLaunchCount,
       designSystem: designSystem ?? state.designSystem,
     );
     await changeSettings(newSettings);
@@ -343,39 +383,27 @@ class SettingsNotifier extends Notifier<Settings> {
     }
   }
 
-  Future<void> checkAndUpdateSubscription() async {}
+  /// 지금 저장된 구독 만료일 — 스토어 조회가 이 권리를 덮어쓰기 전에 대조한다.
+  DateTime? get storedSubscriptionExpiry => state.subscriptionExpiryDate;
+
+  /// 개발용 프리미엄 토글 — 실제 권리 필드는 건드리지 않는다.
+  Future<void> setDevPremium(bool value) => changeSettings(state.copyWith(devPremium: value));
+
+  /// 스토어를 조회한 결과로 구독 권리를 통째로 맞춘다(만료일 null = 구독 없음).
+  /// 여러 구매를 먼저 하나의 권리로 합친 값이 들어오므로 덮어써도 순서에 안 흔들린다.
+  Future<void> applyStoreEntitlement(PremiumEntitlement e) async {
+    if (state.hasLifetime == e.hasLifetime &&
+        state.subscriptionExpiryDate == e.subscriptionExpiry &&
+        state.subscriptionOpenEnded == e.subscriptionOpenEnded) {
+      return;
+    }
+    await changeSettings(state.copyWith(
+      hasLifetime: e.hasLifetime,
+      subscriptionExpiryDate: e.subscriptionExpiry,
+      subscriptionOpenEnded: e.subscriptionOpenEnded,
+    ));
+  }
 }
-
-// Future<void> checkAndUpdateSubscription() async {
-//   try {
-//     final purchases = await InAppPurchase.instance.();
-//     final validSubscription = purchases.pastPurchases.firstWhereOrNull((purchase) =>
-//         AppConfig.productIds.values.contains(purchase.productID) && purchase.status == PurchaseStatus.purchased);
-
-//     if (validSubscription != null) {
-//       // 유효한 구독이 있는 경우
-//       final purchaseDate = DateTime.fromMillisecondsSinceEpoch(int.parse(validSubscription.transactionDate!));
-//       final newExpiryDate = purchaseDate.add(const Duration(days: 31));
-
-//       if (newExpiryDate.isAfter(DateTime.now())) {
-//         // 새로운 만료 날짜가 현재보다 미래인 경우에만 업데이트
-//         await changeSettings(state.copyWith(subscriptionExpiryDate: newExpiryDate));
-//         logger.i('구독이 갱신되었습니다. 새 만료 날짜: $newExpiryDate');
-//       } else {
-//         // 구독이 이미 만료된 경우
-//         await changeSettings(state.copyWith(subscriptionExpiryDate: null));
-//         logger.i('구독이 만료되었습니다.');
-//       }
-//     } else {
-//       // 유효한 구독이 없는 경우
-//       await changeSettings(state.copyWith(subscriptionExpiryDate: null));
-//       logger.i('활성 구독을 찾을 수 없습니다.');
-//     }
-//   } catch (e) {
-//     logger.e('구독 상태 확인 중 오류 발생: $e');
-//   }
-// }
-// }
 
 /// 전역 설정 프로바이더
 ///

@@ -70,7 +70,6 @@ class _SettingsState extends ConsumerState<SettingsView> {
       setState(() {
         _packageInfo = packageInfo;
       });
-      ref.read(settingsProvider.notifier).checkAndUpdateSubscription();
     });
   }
 
@@ -108,7 +107,8 @@ class _SettingsState extends ConsumerState<SettingsView> {
 
     final badgeData = badgesData.firstWhere((badge) => badge['id'] == badgeId, orElse: () => null);
     if (badgeData != null) {
-      final existingBadge = await badgeRepository.getById(badgeData['id']);
+      // badges.json의 id는 문자열(badge_id)이라 정수 PK인 getById로는 찾을 수 없다.
+      final existingBadge = (await badgeRepository.findByField('badge_id', badgeData['id'])).firstOrNull;
       if (existingBadge != null) {
         // 뱃지 업데이트
         if (!mounted) return;
@@ -131,7 +131,7 @@ class _SettingsState extends ConsumerState<SettingsView> {
           type: BadgeType.values[badgeData['type'] as int],
           isAchieved: true,
           earnedDate: DateTime.now(),
-          condition: badgeData['condition'],
+          condition: jsonEncode(badgeData['condition']), // badges.json에선 객체, 모델에선 문자열
           createdAt: DateTime.now(),
         );
 
@@ -450,11 +450,7 @@ class _SettingsState extends ConsumerState<SettingsView> {
                 Container(),
               ]),
               settings.isSubscriptionActive
-                  ? Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      SText('Subscription Status'),
-                      SText('Active until {}',
-                          args: [DateFormat('yyyy-MM-dd').format(settings.subscriptionExpiryDate!)]),
-                    ])
+                  ? SubscriptionStatusRow(settings: settings)
                   : Column(children: [
                       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                         SText('Premium license'),
@@ -551,13 +547,9 @@ class _SettingsState extends ConsumerState<SettingsView> {
                     //     child: SText('Remove All Geofences')),
                     SElevatedButton(
                         onPressed: () {
-                          final settings = ref.read(settingsProvider);
-                          if (settings.isSubscriptionActive) {
-                            ref.read(settingsProvider.notifier).clearSingleSetting(subscriptionExpiryDate: true);
-                          } else {
-                            final expiryDate = DateTime.now().add(const Duration(days: 30));
-                            ref.read(settingsProvider.notifier).updateSingleSetting(subscriptionExpiryDate: expiryDate);
-                          }
+                          // 실제 구매 권리와 별개인 개발 덮어쓰기만 뒤집는다.
+                          final notifier = ref.read(settingsProvider.notifier);
+                          notifier.setDevPremium(!ref.read(settingsProvider).devPremium);
                         },
                         child: SText('Toggle Purchase')),
                     const Divider(thickness: 2),
@@ -1069,5 +1061,28 @@ class _SettingsState extends ConsumerState<SettingsView> {
     }
 
     RaynearNotification().setReminderNotification();
+  }
+}
+
+/// 구독 상태 행 — 평생 / 열린 구독(만료일 모름) / 만료일 있는 구독.
+class SubscriptionStatusRow extends StatelessWidget {
+  const SubscriptionStatusRow({super.key, required this.settings});
+
+  final Settings settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final expiry = settings.subscriptionExpiryDate;
+    // 만료일이 이미 지났으면(3일 유예 중) 'Active until <지난 날짜>'가 거짓이므로 날짜 없이 Active만 보인다.
+    final lapsed = expiry != null && !expiry.isAfter(DateTime.now());
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      SText('Subscription Status'),
+      if (settings.hasLifetime)
+        SText('Lifetime')
+      else if (settings.subscriptionOpenEnded || expiry == null || lapsed)
+        SText('Active')
+      else
+        SText('Active until {}', args: [DateFormat('yyyy-MM-dd').format(expiry)]),
+    ]);
   }
 }

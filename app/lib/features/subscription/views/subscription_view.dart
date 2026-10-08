@@ -42,7 +42,7 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
         _monthlyPrice = monthly.price;
         _yearlyPrice = yearly.price;
         _lifetimePrice = lifetime.price;
-        _yearlyDiscount = ref.read(inAppPurchaseServiceProvider)?.calculateDiscount(monthly.price, yearly.price, 12) ?? '0';
+        _yearlyDiscount = calculateDiscount(monthly.rawPrice, yearly.rawPrice, 12);
       });
     }
   }
