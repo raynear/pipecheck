@@ -395,6 +395,15 @@ void main() {
         expect(c.read(settingsProvider).subscriptionOpenEnded, isTrue);
       });
 
+      test('소모성 등 월간·연간·평생이 아닌 상품은 확인 안 돼도 마무리하지 않는다', () async {
+        addition.purchases = [
+          _wrapper('coins', PurchaseStateWrapper.purchased, acknowledged: false),
+          _wrapper('y', PurchaseStateWrapper.purchased, acknowledged: false),
+        ];
+        await service.refreshEntitlement();
+        expect(platform.completed.map((p) => p.productID), ['y']);
+      });
+
       test('이미 확인된 구매와 대기(pending) 구매는 마무리하지 않는다', () async {
         addition.purchases = [
           _wrapper('m', PurchaseStateWrapper.purchased),

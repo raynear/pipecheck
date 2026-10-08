@@ -103,6 +103,8 @@ abstract class Settings with _$Settings {
     // 스토어가 만료일을 안 주는 구독(Google Play) — 날짜 없이, 성공한 스토어 조회가
     // "소유 안 함"이라고 말할 때까지 활성이다.
     @Default(false) bool subscriptionOpenEnded,
+    // 저장된 만료일(iOS)에 [subscriptionGracePeriod] 유예를 줘도 되는가 — 회수 증거가 없을 때만 true.
+    @Default(false) bool subscriptionGrace,
     // 개발 확인용 프리미엄 덮어쓰기 — 실제 권리(hasLifetime·구독)와 완전히 별개이고,
     // 스토어 재조회가 건드리지 않는다. devOverrideAllowed인 빌드에서만 효력이 있다.
     @Default(false) bool devPremium,
@@ -147,6 +149,7 @@ abstract class Settings with _$Settings {
 
       final bool hasLifetime = Orange.getBool('hasLifetime') ?? false;
       final bool subscriptionOpenEnded = Orange.getBool('subscriptionOpenEnded') ?? false;
+      final bool subscriptionGrace = Orange.getBool('subscriptionGrace') ?? false;
       final bool devPremium = Orange.getBool('devPremium') ?? false;
 
       final int appLaunchCount = Orange.getInt('appLaunchCount') ?? 0;
@@ -170,6 +173,7 @@ abstract class Settings with _$Settings {
         subscriptionExpiryDate: subscriptionExpiryDate,
         hasLifetime: hasLifetime,
         subscriptionOpenEnded: subscriptionOpenEnded,
+        subscriptionGrace: subscriptionGrace,
         devPremium: devPremium,
         appLaunchCount: appLaunchCount,
         designSystem: designSystem,
@@ -260,6 +264,7 @@ extension SettingsExtension on Settings {
       Orange.setString('subscriptionExpiryDate', subscriptionExpiryDate?.toIso8601String() ?? '');
       Orange.setBool('hasLifetime', hasLifetime);
       Orange.setBool('subscriptionOpenEnded', subscriptionOpenEnded);
+      Orange.setBool('subscriptionGrace', subscriptionGrace);
       Orange.setBool('devPremium', devPremium);
       Orange.setInt('appLaunchCount', appLaunchCount);
       Orange.setInt('designSystem', designSystem.index);
@@ -272,6 +277,7 @@ extension SettingsExtension on Settings {
         hasLifetime: hasLifetime,
         subscriptionExpiry: subscriptionExpiryDate,
         subscriptionOpenEnded: subscriptionOpenEnded,
+        subscriptionGrace: subscriptionGrace,
       );
 
   // 열린 구독(Google Play)은 성공한 조회가 "소유 안 함"이라고 말할 때까지 날짜와 무관하게 활성.
@@ -280,22 +286,32 @@ extension SettingsExtension on Settings {
 
 /// 모든 권리를 합친 최종 프리미엄 상태. [subscriptionExpiry]는 스토어가 준 실제 만료일만
 /// 담는다. [subscriptionOpenEnded]는 만료일을 안 주는 구독을 보유 중이라는 뜻이다(날짜 없음).
+// ponytail: iOS 자동갱신 구독의 결제 재시도·오프라인 캐시 오차를 덮는 상수 1개. 상한 3일 —
+// Apple 결제 재시도 유예와 같은 자릿수이며, 그 이상은 환불 후 무료 이용을 늘린다.
+const subscriptionGracePeriod = Duration(days: 3);
+
 class PremiumEntitlement {
   const PremiumEntitlement({
     required this.hasLifetime,
     required this.subscriptionExpiry,
     this.subscriptionOpenEnded = false,
+    this.subscriptionGrace = false,
   });
 
   final bool hasLifetime;
   final DateTime? subscriptionExpiry;
   final bool subscriptionOpenEnded;
 
+  /// [subscriptionExpiry]가 지난 뒤에도 [subscriptionGracePeriod] 동안 활성으로 본다.
+  final bool subscriptionGrace;
+
   bool get hasSubscription => subscriptionOpenEnded || subscriptionExpiry != null;
 
   /// 지금 시각 기준 활성 여부 — 열린 구독은 날짜와 무관, 날짜가 있으면 미래여야 한다.
   bool isActiveAt(DateTime now) =>
-      hasLifetime || subscriptionOpenEnded || (subscriptionExpiry?.isAfter(now) ?? false);
+      hasLifetime ||
+      subscriptionOpenEnded ||
+      (subscriptionExpiry?.add(subscriptionGrace ? subscriptionGracePeriod : Duration.zero).isAfter(now) ?? false);
 }
 
 /// 개발 프리미엄 덮어쓰기를 인정하는 빌드인가 — 디버그 또는 `-dev` 접미사 내부 배포 빌드.
@@ -376,6 +392,9 @@ class SettingsNotifier extends Notifier<Settings> {
     }
   }
 
+  /// 지금 저장된 구독 만료일 — 스토어 조회가 이 권리를 덮어쓰기 전에 대조한다.
+  DateTime? get storedSubscriptionExpiry => state.subscriptionExpiryDate;
+
   /// 개발용 프리미엄 토글 — 실제 권리 필드는 건드리지 않는다.
   Future<void> setDevPremium(bool value) => changeSettings(state.copyWith(devPremium: value));
 
@@ -384,13 +403,15 @@ class SettingsNotifier extends Notifier<Settings> {
   Future<void> applyStoreEntitlement(PremiumEntitlement e) async {
     if (state.hasLifetime == e.hasLifetime &&
         state.subscriptionExpiryDate == e.subscriptionExpiry &&
-        state.subscriptionOpenEnded == e.subscriptionOpenEnded) {
+        state.subscriptionOpenEnded == e.subscriptionOpenEnded &&
+        state.subscriptionGrace == e.subscriptionGrace) {
       return;
     }
     await changeSettings(state.copyWith(
       hasLifetime: e.hasLifetime,
       subscriptionExpiryDate: e.subscriptionExpiry,
       subscriptionOpenEnded: e.subscriptionOpenEnded,
+      subscriptionGrace: e.subscriptionGrace,
     ));
   }
 }

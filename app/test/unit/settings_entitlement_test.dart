@@ -127,4 +127,18 @@ void main() {
     expect(locales, isNotEmpty);
     expect(supportedLocales, locales);
   });
+
+  test('유예 플래그가 켜진 만료일은 3일까지, 꺼져 있으면 만료 즉시 비활성이며 재시작 뒤에도 유지된다', () async {
+    final past = DateTime.now().subtract(const Duration(days: 2));
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: past, subscriptionGrace: true));
+    expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
+    expect(Settings.fromOrange().subscriptionGrace, isTrue);
+
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: past));
+    expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
+
+    await n.applyStoreEntitlement(PremiumEntitlement(
+        hasLifetime: false, subscriptionExpiry: DateTime.now().subtract(const Duration(days: 4)), subscriptionGrace: true));
+    expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
+  });
 }

@@ -66,19 +66,34 @@ class StoreEntitlement {
 /// 뒤에 와도 결과가 같다). 만료일을 로컬에서 만들어 내지 않는다 — 스토어가 준 값만 쓰고,
 /// 만료일을 주지 않는 구독([StoreEntitlement.openEnded], Google Play)은 시간 창 없이
 /// 성공한 조회가 소유하지 않는다고 말할 때까지 활성으로 본다. 만료일을 모르는 그 밖의 구독은 권리가 아니다.
+///
+/// [storedExpiry]는 지금 저장된 구독 만료일이다. iOS의 Transaction.all은 로컬 캐시라
+/// 오프라인이면 옛 거래만 돌려줄 수 있으므로, 저장된 권리를 덮는 회수 증거가 없는 동안은
+/// 더 짧은 만료일로 내리지 않고 저장 만료일 뒤 [subscriptionGracePeriod]까지 활성으로 둔다.
+/// 회수 증거 = 회수된 평생권, 또는 만료일이 저장 만료일보다 이르지 않은 회수된 구독 거래.
 PremiumEntitlement derivePremiumEntitlement(
   Iterable<StoreEntitlement> items, {
   required Map<String, String> productIds,
   required DateTime now,
+  DateTime? storedExpiry,
 }) {
   var lifetime = false;
   DateTime? expiry;
   var openEnded = false;
+  var revokedCoversStored = false;
   for (final e in items) {
-    if (e.revoked) continue;
+    final isSub = e.productId == productIds['monthly'] || e.productId == productIds['yearly'];
+    if (e.revoked) {
+      final until = e.expiresAt;
+      if (e.productId == productIds['lifetime'] ||
+          (isSub && storedExpiry != null && until != null && !until.isBefore(storedExpiry))) {
+        revokedCoversStored = true;
+      }
+      continue;
+    }
     if (e.productId == productIds['lifetime']) {
       lifetime = true;
-    } else if (e.productId == productIds['monthly'] || e.productId == productIds['yearly']) {
+    } else if (isSub) {
       final until = e.expiresAt;
       if (until == null) {
         openEnded = openEnded || e.openEnded;
@@ -87,10 +102,15 @@ PremiumEntitlement derivePremiumEntitlement(
       }
     }
   }
+  final stored = storedExpiry;
+  if (!revokedCoversStored && stored != null && stored.add(subscriptionGracePeriod).isAfter(now)) {
+    if (expiry == null || stored.isAfter(expiry)) expiry = stored;
+  }
   return PremiumEntitlement(
     hasLifetime: lifetime,
     subscriptionExpiry: expiry,
     subscriptionOpenEnded: openEnded,
+    subscriptionGrace: expiry != null && !revokedCoversStored,
   );
 }
 
@@ -137,8 +157,11 @@ Future<List<StoreEntitlement>> fetchStoreEntitlements() async {
 /// 앱이 꺼진 사이 끝나지 못한 구매(프로세스 종료, 대기 결제 승인)는 스트림에 다시 안 올 수
 /// 있다. 확인(acknowledge)을 안 하면 Google Play가 3일 뒤 자동 환불하므로 조회 때 마무리한다.
 Future<void> _completeUnacknowledged(InAppPurchase iap, List<GooglePlayPurchaseDetails> past) async {
+  // 소모성 등 이 세션 모델 밖의 상품은 건드리지 않는다 — 월간·연간·평생만 마무리한다.
+  final ids = AppConfig().productIds;
+  final roles = {ids['monthly'], ids['yearly'], ids['lifetime']}..remove('');
   for (final p in past) {
-    if (p.status != PurchaseStatus.purchased || !p.pendingCompletePurchase) continue;
+    if (p.status != PurchaseStatus.purchased || !p.pendingCompletePurchase || !roles.contains(p.productID)) continue;
     try {
       await iap.completePurchase(p);
     } catch (e) {
@@ -198,7 +221,12 @@ class InAppPurchaseService {
   Future<PremiumEntitlement?> _refreshNow() async {
     try {
       final items = await fetchStoreEntitlements();
-      final entitlement = derivePremiumEntitlement(items, productIds: AppConfig().productIds, now: _clock());
+      final entitlement = derivePremiumEntitlement(
+        items,
+        productIds: AppConfig().productIds,
+        now: _clock(),
+        storedExpiry: settingsNotifier.storedSubscriptionExpiry,
+      );
       await settingsNotifier.applyStoreEntitlement(entitlement);
       return entitlement;
     } catch (e) {

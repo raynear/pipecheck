@@ -83,6 +83,94 @@ void main() {
     });
   });
 
+  group('iOS 오프라인 캐시·회수 증거·유예', () {
+    Duration d(int n) => Duration(days: n);
+    const day = Duration(days: 1);
+    // 저장된 만료일 [stored]를 안고, 이번 조회가 [items]만 돌려준 상황.
+    PremiumEntitlement again(List<StoreEntitlement> items, DateTime? stored) =>
+        derivePremiumEntitlement(items, productIds: _ids, now: _now, storedExpiry: stored);
+
+    test('회귀: 1년 전 환불된 월간 1건 + 살아 있는 월간 1건 — 다음 조회가 만료된 옛 거래만 줘도 활성 유지', () {
+      final live = _now.add(d(10));
+      final first = _derive([
+        _e('m', exp: _now.subtract(d(335)), revoked: true),
+        _e('m', exp: live),
+      ]);
+      expect(first.subscriptionExpiry, live);
+
+      final next = again([
+        _e('m', exp: _now.subtract(d(335)), revoked: true),
+        _e('m', exp: _now.subtract(d(300))),
+      ], first.subscriptionExpiry);
+      expect(next.subscriptionExpiry, live);
+      expect(next.isActiveAt(_now), isTrue);
+    });
+
+    test('저장 만료일이 미래이고 증거가 없으면 빈 캐시·더 짧은 만료일로 덮지 않는다', () {
+      final stored = _now.add(d(5));
+      expect(again(const [], stored).subscriptionExpiry, stored);
+      expect(again([_e('m', exp: _now.add(d(2)))], stored).subscriptionExpiry, stored);
+    });
+
+    test('더 긴 새 만료일(갱신)은 저장값을 이긴다', () {
+      final renewed = _now.add(d(35));
+      expect(again([_e('m', exp: renewed)], _now.add(d(5))).subscriptionExpiry, renewed);
+    });
+
+    test('회수된 거래의 만료일이 저장 만료일보다 이르지 않으면(경계 포함) 증거다', () {
+      final stored = _now.add(d(5));
+      for (final exp in [stored, stored.add(day)]) {
+        final r = again([_e('m', exp: exp, revoked: true)], stored);
+        expect(r.isActiveAt(_now), isFalse, reason: '$exp');
+        expect(r.subscriptionGrace, isFalse);
+      }
+      // 저장 만료일보다 1초 이른 회수는 증거가 아니다
+      expect(again([_e('m', exp: stored.subtract(const Duration(seconds: 1)), revoked: true)], stored).isActiveAt(_now), isTrue);
+    });
+
+    test('회수된 평생권은 증거다', () {
+      expect(again([_e('l', revoked: true)], _now.add(d(5))).isActiveAt(_now), isFalse);
+    });
+
+    test('증거가 있어도 살아 있는 다른 거래의 만료일은 유지되지만 유예는 없다', () {
+      final live = _now.add(d(2));
+      final r = again([_e('m', exp: _now.add(d(9)), revoked: true), _e('m', exp: live)], _now.add(d(5)));
+      expect(r.subscriptionExpiry, live);
+      expect(r.subscriptionGrace, isFalse);
+      expect(r.isActiveAt(live.add(day)), isFalse);
+    });
+
+    test('유예 경계: 저장 만료 2일 뒤는 활성, 4일 뒤는 비활성(저장값은 늘지 않는다)', () {
+      final stored = _now.subtract(d(2));
+      final day2 = again(const [], stored);
+      expect(day2.subscriptionExpiry, stored);
+      expect(day2.isActiveAt(_now), isTrue);
+
+      final day4 = again(const [], _now.subtract(d(4)));
+      expect(day4.isActiveAt(_now), isFalse);
+      expect(day4.subscriptionExpiry, isNull);
+
+      // 정확히 3일째 경계는 활성이 아니다(isAfter)
+      expect(again(const [], _now.subtract(subscriptionGracePeriod)).isActiveAt(_now), isFalse);
+    });
+
+    test('만료 2일 뒤라도 그 기간을 덮는 회수가 있으면 유예 없음', () {
+      final stored = _now.subtract(d(2));
+      expect(again([_e('m', exp: stored, revoked: true)], stored).isActiveAt(_now), isFalse);
+    });
+
+    test('유예는 평생권·열린 구독(Android)에 영향을 주지 않는다', () {
+      expect(again([_e('l')], null).subscriptionGrace, isFalse);
+      final open = again([_e('y', openEnded: true)], null);
+      expect(open.subscriptionExpiry, isNull);
+      expect(open.subscriptionGrace, isFalse);
+    });
+
+    test('저장 만료일이 없으면 만료된 구독은 그대로 비활성(유예를 지어내지 않는다)', () {
+      expect(again([_e('m', exp: _now.subtract(day))], null).isActiveAt(_now), isFalse);
+    });
+  });
+
   group('entitlementFromSk2', () {
     SK2Transaction tx({String? json, String? expiration}) => SK2Transaction(
           id: '1',
