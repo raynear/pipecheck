@@ -49,7 +49,7 @@ age_rating:
 #                    && git add fastlane && 커밋 (fastlane_ref도 같은 태그로 갱신).
 # URL 오버라이드: FASTLANE_REPO 환경변수.
 tooling:
-  fastlane_ref: "v0.2.69"
+  fastlane_ref: "v0.2.70"
   # `tools/cli` 핀 — tools/cli/pubspec.yaml git dep의 ref:와 같이 올릴 것 (W3-18).
   # 절차: boiler_plate docs/reference/maintainer/DERIVED_APP_UPDATES.md §4.5
   cli_ref: "cli-v1.3.9"
