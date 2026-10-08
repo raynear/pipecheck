@@ -826,6 +826,8 @@
   "Purchase restored successfully": "Kauf erfolgreich wiederhergestellt",
   "No previous purchases found": "Keine früheren Käufe gefunden",
   "Failed to restore purchase": "Kauf konnte nicht wiederhergestellt werden",
+  "Loading...": "Wird geladen...",
+  "Confirming your purchase. It will be applied shortly.": "Dein Kauf wird bestätigt. Er wird in Kürze übernommen.",
   "Lifetime": "Lebenslang",
   "Active": "Aktiv"
 }

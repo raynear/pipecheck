@@ -62,24 +62,6 @@ class StoreEntitlement {
   final bool openEnded;
 }
 
-/// 모든 권리를 합친 최종 프리미엄 상태. [subscriptionExpiry]는 스토어가 준 실제 만료일만
-/// 담는다. [subscriptionOpenEnded]는 만료일을 안 주는 구독을 보유 중이라는 뜻이다(날짜 없음).
-class PremiumEntitlement {
-  const PremiumEntitlement({
-    required this.hasLifetime,
-    required this.subscriptionExpiry,
-    this.subscriptionOpenEnded = false,
-  });
-
-  final bool hasLifetime;
-  final DateTime? subscriptionExpiry;
-  final bool subscriptionOpenEnded;
-
-  bool get hasSubscription => subscriptionOpenEnded || subscriptionExpiry != null;
-
-  bool get isActive => hasLifetime || hasSubscription;
-}
-
 /// 스토어 권리 목록 → 프리미엄 상태. 순서와 무관하다(평생·월간이 섞여도, 옛 갱신이
 /// 뒤에 와도 결과가 같다). 만료일을 로컬에서 만들어 내지 않는다 — 스토어가 준 값만 쓰고,
 /// 만료일을 주지 않는 구독([StoreEntitlement.openEnded], Google Play)은 시간 창 없이
@@ -136,6 +118,9 @@ Future<List<StoreEntitlement>> fetchStoreEntitlements() async {
   switch (defaultTargetPlatform) {
     case TargetPlatform.iOS:
       // Transaction.all — 만료·환불 거래도 오므로 파생 단계에서 걸러낸다.
+      // 전제: App Store Connect의 결제 실패 유예 기간(billing grace period)은 꺼 둔다.
+      // 이 플러그인은 currentEntitlements·renewalInfo를 노출하지 않아서, 유예 기간에 든
+      // 구독자(expiresDate 경과)는 만료로 읽힌다. 켜려면 네이티브 브리지가 먼저 필요하다.
       return (await SK2Transaction.transactions()).map(entitlementFromSk2).toList();
     case TargetPlatform.android:
       final past = await _androidPast(iap);
@@ -181,7 +166,9 @@ class InAppPurchaseService {
     this.settingsNotifier, {
     this.snackBarService,
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now {
+    Duration retryDelay = const Duration(seconds: 2),
+  })  : _clock = clock ?? DateTime.now,
+        _retryDelay = retryDelay {
     // 부팅 때부터 붙어 있어야 앱이 꺼진 사이 도착한 거래(갱신·대기 승인)를 받는다.
     _subscription = _inAppPurchase.purchaseStream.listen(
       _listenToPurchaseUpdated,
@@ -192,6 +179,8 @@ class InAppPurchaseService {
   final SettingsNotifier settingsNotifier;
   final SnackBarService? snackBarService;
   final DateTime Function() _clock;
+  final Duration _retryDelay;
+  static const _refreshRetries = 2;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   Future<void> _refreshQueue = Future.value();
   String? _buying; // 사용자가 buyProduct로 시작한 상품
@@ -210,11 +199,7 @@ class InAppPurchaseService {
     try {
       final items = await fetchStoreEntitlements();
       final entitlement = derivePremiumEntitlement(items, productIds: AppConfig().productIds, now: _clock());
-      await settingsNotifier.applyStoreEntitlement(
-        hasLifetime: entitlement.hasLifetime,
-        subscriptionExpiry: entitlement.subscriptionExpiry,
-        subscriptionOpenEnded: entitlement.subscriptionOpenEnded,
-      );
+      await settingsNotifier.applyStoreEntitlement(entitlement);
       return entitlement;
     } catch (e) {
       logger.w('Entitlement refresh failed, keeping last known state: $e');
@@ -228,6 +213,10 @@ class InAppPurchaseService {
     for (final purchaseDetails in purchaseDetailsList) {
       logger.d('Purchase status: ${purchaseDetails.status} ${purchaseDetails.productID}');
       if (purchaseDetails.status == PurchaseStatus.pending) continue;
+      if (purchaseDetails.status == PurchaseStatus.error || purchaseDetails.status == PurchaseStatus.canceled) {
+        // 사용자가 시작한 구매가 끝났다 — 이후 같은 상품의 자동 갱신을 "방금 산 것"으로 알리지 않는다.
+        if (purchaseDetails.productID == _buying) _buying = null;
+      }
       if (purchaseDetails.status == PurchaseStatus.error) {
         logger.e('Purchase error: ${purchaseDetails.error}');
         snackBarService?.showError('Purchase failed'.tr());
@@ -250,9 +239,14 @@ class InAppPurchaseService {
       }
     }
     if (!needsRefresh) return;
-    final entitlement = await refreshEntitlement();
+    // 거래는 이미 마무리돼 스트림으로 다시 오지 않는다 — 조회가 실패하면 몇 번 더 시도한다.
+    var entitlement = await refreshEntitlement();
+    for (var i = 0; entitlement == null && i < _refreshRetries; i++) {
+      await Future<void>.delayed(_retryDelay * (i + 1));
+      entitlement = await refreshEntitlement();
+    }
     if (entitlement == null) {
-      snackBarService?.showError('Failed to activate subscription'.tr());
+      snackBarService?.showInfo('Confirming your purchase. It will be applied shortly.'.tr());
       return;
     }
     for (final productId in newlyPurchased) {
@@ -355,7 +349,7 @@ class InAppPurchaseService {
       final entitlement = await refreshEntitlement();
       if (entitlement == null) {
         snackBarService?.showError('Failed to restore purchase'.tr());
-      } else if (entitlement.isActive) {
+      } else if (entitlement.isActiveAt(_clock())) {
         snackBarService?.showSuccess('Purchase restored successfully'.tr());
       } else {
         snackBarService?.showInfo('No previous purchases found'.tr());

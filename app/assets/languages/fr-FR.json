@@ -826,6 +826,8 @@
   "Purchase restored successfully": "Achat restauré avec succès",
   "No previous purchases found": "Aucun achat précédent trouvé",
   "Failed to restore purchase": "Impossible de restaurer l'achat",
+  "Loading...": "Chargement...",
+  "Confirming your purchase. It will be applied shortly.": "Confirmation de votre achat en cours. Il sera appliqué sous peu.",
   "Lifetime": "À vie",
   "Active": "Actif"
 }

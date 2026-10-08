@@ -268,13 +268,34 @@ extension SettingsExtension on Settings {
     }
   }
 
-  bool get isSubscriptionActive {
-    // 열린 구독(Google Play)은 성공한 조회가 "소유 안 함"이라고 말할 때까지 날짜와 무관하게 활성.
-    return hasLifetime ||
-        subscriptionOpenEnded ||
-        (devPremium && devOverrideAllowed) ||
-        (subscriptionExpiryDate != null && subscriptionExpiryDate!.isAfter(DateTime.now()));
-  }
+  PremiumEntitlement get entitlement => PremiumEntitlement(
+        hasLifetime: hasLifetime,
+        subscriptionExpiry: subscriptionExpiryDate,
+        subscriptionOpenEnded: subscriptionOpenEnded,
+      );
+
+  // 열린 구독(Google Play)은 성공한 조회가 "소유 안 함"이라고 말할 때까지 날짜와 무관하게 활성.
+  bool get isSubscriptionActive => (devPremium && devOverrideAllowed) || entitlement.isActiveAt(DateTime.now());
+}
+
+/// 모든 권리를 합친 최종 프리미엄 상태. [subscriptionExpiry]는 스토어가 준 실제 만료일만
+/// 담는다. [subscriptionOpenEnded]는 만료일을 안 주는 구독을 보유 중이라는 뜻이다(날짜 없음).
+class PremiumEntitlement {
+  const PremiumEntitlement({
+    required this.hasLifetime,
+    required this.subscriptionExpiry,
+    this.subscriptionOpenEnded = false,
+  });
+
+  final bool hasLifetime;
+  final DateTime? subscriptionExpiry;
+  final bool subscriptionOpenEnded;
+
+  bool get hasSubscription => subscriptionOpenEnded || subscriptionExpiry != null;
+
+  /// 지금 시각 기준 활성 여부 — 열린 구독은 날짜와 무관, 날짜가 있으면 미래여야 한다.
+  bool isActiveAt(DateTime now) =>
+      hasLifetime || subscriptionOpenEnded || (subscriptionExpiry?.isAfter(now) ?? false);
 }
 
 /// 개발 프리미엄 덮어쓰기를 인정하는 빌드인가 — 디버그 또는 `-dev` 접미사 내부 배포 빌드.
@@ -328,7 +349,7 @@ class SettingsNotifier extends Notifier<Settings> {
     TimeOfDay? reminderTime,
     DesignSystemType? designSystem,
   }) async {
-    final newSettings = Settings(
+    final newSettings = state.copyWith(
       onBoard: onBoard ?? state.onBoard,
       displayMode: displayMode ?? state.displayMode,
       themeColor: themeColor ?? state.themeColor,
@@ -341,11 +362,6 @@ class SettingsNotifier extends Notifier<Settings> {
       useNotification: useNotification ?? state.useNotification,
       useReminder: useReminder ?? state.useReminder,
       reminderTime: reminderTime ?? state.reminderTime,
-      subscriptionExpiryDate: state.subscriptionExpiryDate,
-      hasLifetime: state.hasLifetime,
-      subscriptionOpenEnded: state.subscriptionOpenEnded,
-      devPremium: state.devPremium,
-      appLaunchCount: state.appLaunchCount,
       designSystem: designSystem ?? state.designSystem,
     );
     await changeSettings(newSettings);
@@ -365,20 +381,16 @@ class SettingsNotifier extends Notifier<Settings> {
 
   /// 스토어를 조회한 결과로 구독 권리를 통째로 맞춘다(만료일 null = 구독 없음).
   /// 여러 구매를 먼저 하나의 권리로 합친 값이 들어오므로 덮어써도 순서에 안 흔들린다.
-  Future<void> applyStoreEntitlement({
-    required bool hasLifetime,
-    required DateTime? subscriptionExpiry,
-    bool subscriptionOpenEnded = false,
-  }) async {
-    if (state.hasLifetime == hasLifetime &&
-        state.subscriptionExpiryDate == subscriptionExpiry &&
-        state.subscriptionOpenEnded == subscriptionOpenEnded) {
+  Future<void> applyStoreEntitlement(PremiumEntitlement e) async {
+    if (state.hasLifetime == e.hasLifetime &&
+        state.subscriptionExpiryDate == e.subscriptionExpiry &&
+        state.subscriptionOpenEnded == e.subscriptionOpenEnded) {
       return;
     }
     await changeSettings(state.copyWith(
-      hasLifetime: hasLifetime,
-      subscriptionExpiryDate: subscriptionExpiry,
-      subscriptionOpenEnded: subscriptionOpenEnded,
+      hasLifetime: e.hasLifetime,
+      subscriptionExpiryDate: e.subscriptionExpiry,
+      subscriptionOpenEnded: e.subscriptionOpenEnded,
     ));
   }
 }

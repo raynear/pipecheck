@@ -826,6 +826,8 @@
   "Purchase restored successfully": "购买已恢复",
   "No previous purchases found": "未找到可恢复的历史购买",
   "Failed to restore purchase": "恢复购买失败",
+  "Loading...": "加载中...",
+  "Confirming your purchase. It will be applied shortly.": "正在确认您的购买，稍后将生效。",
   "Lifetime": "终身",
   "Active": "已激活"
 }

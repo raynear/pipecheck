@@ -1,12 +1,10 @@
 // 가짜 스토어 플랫폼으로 스토어 조회·구매 시작·프로바이더 배선을 잰다.
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:pipecheck/config/app_config.dart';
 import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:pipecheck/core/services/in_app_purchase_service.dart';
-import 'package:pipecheck/core/services/snackbar_service.dart';
 import 'package:pipecheck/core/state/settings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -19,7 +17,8 @@ import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_interface.dart';
 // ignore: depend_on_referenced_packages
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
-import 'package:orange/orange.dart';
+import '../support/fake_snackbar.dart';
+import '../support/orange_harness.dart';
 
 
 PurchaseWrapper _wrapper(String product, PurchaseStateWrapper state, {bool acknowledged = true}) =>
@@ -84,6 +83,9 @@ class _FakePlatform extends InAppPurchasePlatform {
 class _FakeAndroidAddition extends Fake implements InAppPurchaseAndroidPlatformAddition {
   List<PurchaseWrapper> purchases = [];
   bool error = false;
+
+  /// 처음 n번의 조회만 실패시킨다(일시적 오프라인).
+  int failFirst = 0;
   int calls = 0;
 
   /// 있으면 n번째 조회가 gates[n]이 열릴 때까지 기다렸다가 그 목록을 돌려준다
@@ -95,6 +97,7 @@ class _FakeAndroidAddition extends Fake implements InAppPurchaseAndroidPlatformA
   @override
   Future<QueryPurchaseDetailsResponse> queryPastPurchases({String? applicationUserName}) async {
     final call = calls++;
+    final failing = error || call < failFirst;
     var result = purchases;
     if (gates != null) {
       inflight++;
@@ -104,21 +107,9 @@ class _FakeAndroidAddition extends Fake implements InAppPurchaseAndroidPlatformA
     }
     return QueryPurchaseDetailsResponse(
       pastPurchases: result.expand(GooglePlayPurchaseDetails.fromPurchase).toList(),
-      error: error ? IAPError(source: 'test', code: 'x', message: 'boom') : null,
+      error: failing ? IAPError(source: 'test', code: 'x', message: 'boom') : null,
     );
   }
-}
-
-class _FakeSnack implements SnackBarService {
-  final log = <String>[];
-  @override
-  void showSuccess(String message, {String? id, Duration? duration}) => log.add('success:$message');
-  @override
-  void showError(String message, {String? id, Duration? duration}) => log.add('error:$message');
-  @override
-  void showInfo(String message, {String? id, Duration? duration}) => log.add('info:$message');
-  @override
-  dynamic noSuchMethod(Invocation invocation) => null;
 }
 
 PurchaseDetails _purchase(String id, PurchaseStatus status) => PurchaseDetails(
@@ -135,19 +126,13 @@ ProductDetails _product(String id) => ProductDetails(
     id: id, title: id, description: '', price: '1', rawPrice: 1, currencyCode: 'USD');
 
 void main() {
-  late Directory dir;
   late _FakePlatform platform;
   late _FakeAndroidAddition addition;
   late bool originalIap;
 
+  setUpOrange('iap_store_test');
+
   setUpAll(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    dir = await Directory.systemTemp.createTemp('iap_store_test');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      (call) async => dir.path,
-    );
-    await Orange.init();
     // InAppPurchase.instance는 첫 접근 때 실제 플랫폼을 등록하며 연결을 시도한다 —
     // 채널이 없는 테스트에선 그 비동기 오류를 여기서 삼키고, 각 테스트가 가짜로 덮는다.
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -156,12 +141,6 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }, (_, _) {});
     debugDefaultTargetPlatformOverride = null;
-  });
-
-  tearDownAll(() async {
-    try {
-      await dir.delete(recursive: true);
-    } on FileSystemException catch (_) {}
   });
 
   setUp(() async {
@@ -288,15 +267,15 @@ void main() {
   group('InAppPurchaseService 권리 동기화', () {
     late ProviderContainer c;
     late SettingsNotifier n;
-    late _FakeSnack snack;
+    late FakeSnack snack;
     late InAppPurchaseService service;
 
     setUp(() {
       c = ProviderContainer();
       addTearDown(c.dispose);
       n = c.read(settingsProvider.notifier);
-      snack = _FakeSnack();
-      service = InAppPurchaseService(n, snackBarService: snack, clock: () => _now);
+      snack = FakeSnack();
+      service = InAppPurchaseService(n, snackBarService: snack, clock: () => _now, retryDelay: Duration.zero);
       addTearDown(service.dispose);
     });
 
@@ -313,12 +292,45 @@ void main() {
     });
 
     test('조회가 실패해도 거래는 마무리하고 마지막 상태를 유지한다', () async {
-      await n.applyStoreEntitlement(hasLifetime: true, subscriptionExpiry: null);
+      await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: true, subscriptionExpiry: null));
       addition.error = true;
       platform.controller.add([_purchase('m', PurchaseStatus.purchased)]);
       await pump();
       expect(platform.completed, hasLength(1));
       expect(c.read(settingsProvider).hasLifetime, isTrue);
+    });
+
+    test('구매 직후 조회가 일시적으로 실패하면 다시 시도해서 반영하고 실패 문구는 띄우지 않는다', () async {
+      addition.purchases = [_wrapper('m', PurchaseStateWrapper.purchased)];
+      addition.failFirst = 1;
+      platform.controller.add([_purchase('m', PurchaseStatus.purchased)]);
+      await pump();
+      expect(addition.calls, 2);
+      expect(c.read(settingsProvider).subscriptionOpenEnded, isTrue);
+      expect(snack.log.where((l) => l.startsWith('error:')), isEmpty);
+    });
+
+    test('재시도까지 모두 실패하면 "확인 중" 안내만 띄우고 마지막 상태를 유지한다', () async {
+      await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: true, subscriptionExpiry: null));
+      addition.error = true;
+      platform.controller.add([_purchase('m', PurchaseStatus.purchased)]);
+      await pump();
+      expect(addition.calls, 3, reason: '첫 조회 + 재시도 2회');
+      expect(snack.log, ['info:Confirming your purchase. It will be applied shortly.']);
+      expect(c.read(settingsProvider).hasLifetime, isTrue);
+    });
+
+    test('사용자가 취소·실패한 구매 뒤 같은 상품의 자동 갱신은 성공 알림을 띄우지 않는다', () async {
+      for (final status in [PurchaseStatus.canceled, PurchaseStatus.error]) {
+        snack.log.clear();
+        addition.purchases = [_wrapper('m', PurchaseStateWrapper.purchased)];
+        await service.buyProduct(_product('m'));
+        platform.controller.add([_purchase('m', status)..pendingCompletePurchase = false]);
+        await pump();
+        platform.controller.add([_purchase('m', PurchaseStatus.purchased)]);
+        await pump();
+        expect(snack.log.where((l) => l.startsWith('success:')), isEmpty, reason: '$status');
+      }
     });
 
     test('오프라인 재조회는 프리미엄을 지우지 않고, 환불 뒤 재조회는 지운다', () async {

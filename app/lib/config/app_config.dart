@@ -455,6 +455,10 @@ class AppConfig {
   static void debugSetConfig(Map<String, dynamic> config) =>
       _config = Map<String, dynamic>.from(config);
 
+  /// 테스트 전용 — 스토어 조회 없이 상품 목록을 심는다.
+  @visibleForTesting
+  static void debugSetProducts(List<ProductDetails> products) => _products = products;
+
   // 특정 키로 config 값을 가져오는 generic getter
   static T? getValue<T>(String key) => _config[key] as T?;
 }

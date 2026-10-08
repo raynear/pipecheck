@@ -1,35 +1,18 @@
 // 설정에 저장되는 구독 권리(평생·임시 창·만료일)의 저장/복원과 활성 판정.
 
-import 'dart:io';
-
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:orange/orange.dart';
 import 'package:pipecheck/core/state/settings.dart';
 
+import '../support/orange_harness.dart';
+
 void main() {
-  late Directory dir;
   late ProviderContainer c;
   late SettingsNotifier n;
 
-  setUpAll(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    dir = await Directory.systemTemp.createTemp('settings_entitlement_test');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      (call) async => dir.path,
-    );
-    await Orange.init();
-  });
-
-  tearDownAll(() async {
-    try {
-      await dir.delete(recursive: true);
-    } on FileSystemException catch (_) {}
-  });
+  setUpOrange('settings_entitlement_test');
 
   setUp(() async {
     await Settings.initial().saveToOrange();
@@ -42,29 +25,27 @@ void main() {
 
   test('평생 구매는 만료일 없이도 활성이고, 아무 권리도 없으면 비활성', () async {
     expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
-    await n.applyStoreEntitlement(hasLifetime: true, subscriptionExpiry: null);
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: true, subscriptionExpiry: null));
     expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
   });
 
   test('구독 만료일이 지났으면 비활성, 남았으면 활성', () async {
-    await n.applyStoreEntitlement(
-        hasLifetime: false, subscriptionExpiry: DateTime.now().subtract(const Duration(days: 1)));
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: DateTime.now().subtract(const Duration(days: 1))));
     expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
-    await n.applyStoreEntitlement(hasLifetime: false, subscriptionExpiry: future);
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: future));
     expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
   });
 
   test('열린 구독은 날짜 없이, 성공한 조회가 부정하기 전까지 활성', () async {
-    await n.applyStoreEntitlement(hasLifetime: false, subscriptionExpiry: null, subscriptionOpenEnded: true);
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: null, subscriptionOpenEnded: true));
     expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
     expect(c.read(settingsProvider).subscriptionExpiryDate, isNull);
-    await n.applyStoreEntitlement(hasLifetime: false, subscriptionExpiry: null);
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: null));
     expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
   });
 
   test('권리 값은 저장했다가 다시 읽어도 그대로(재시작 후 유지)', () async {
-    await n.applyStoreEntitlement(
-        hasLifetime: true, subscriptionExpiry: future, subscriptionOpenEnded: true);
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: true, subscriptionExpiry: future, subscriptionOpenEnded: true));
     await n.setDevPremium(true);
     final loaded = Settings.fromOrange();
     expect(loaded.hasLifetime, isTrue);
@@ -74,7 +55,7 @@ void main() {
   });
 
   test('다른 설정을 바꿔도 권리 값은 지워지지 않는다', () async {
-    await n.applyStoreEntitlement(hasLifetime: true, subscriptionExpiry: future);
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: true, subscriptionExpiry: future));
     await n.updateSingleSetting(bold: true);
     final s = c.read(settingsProvider);
     expect(s.hasLifetime, isTrue);
@@ -82,9 +63,9 @@ void main() {
   });
 
   test('권리가 같으면 다시 쓰지 않는다', () async {
-    await n.applyStoreEntitlement(hasLifetime: true, subscriptionExpiry: future);
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: true, subscriptionExpiry: future));
     final before = c.read(settingsProvider);
-    await n.applyStoreEntitlement(hasLifetime: true, subscriptionExpiry: future);
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: true, subscriptionExpiry: future));
     expect(identical(c.read(settingsProvider), before), isTrue);
   });
 
@@ -92,8 +73,7 @@ void main() {
     tearDown(() => devOverrideAllowed = kDebugMode);
 
     test('실제 권리와 별개: 켜고 꺼도 평생·구독 값을 건드리지 않는다', () async {
-      await n.applyStoreEntitlement(
-          hasLifetime: true, subscriptionExpiry: future, subscriptionOpenEnded: true);
+      await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: true, subscriptionExpiry: future, subscriptionOpenEnded: true));
       await n.setDevPremium(true);
       await n.setDevPremium(false);
       final s = c.read(settingsProvider);
@@ -105,7 +85,7 @@ void main() {
 
     test('스토어 재조회가 지우지 않는다', () async {
       await n.setDevPremium(true);
-      await n.applyStoreEntitlement(hasLifetime: false, subscriptionExpiry: null);
+      await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: null));
       expect(c.read(settingsProvider).devPremium, isTrue);
     });
 

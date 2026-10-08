@@ -826,6 +826,8 @@
   "Purchase restored successfully": "Compra restaurada com sucesso",
   "No previous purchases found": "Nenhuma compra anterior encontrada",
   "Failed to restore purchase": "Não foi possível restaurar a compra",
+  "Loading...": "Carregando...",
+  "Confirming your purchase. It will be applied shortly.": "Confirmando sua compra. Ela será aplicada em instantes.",
   "Lifetime": "Vitalício",
   "Active": "Ativa"
 }

@@ -16,7 +16,6 @@ import 'package:flutter_test/flutter_test.dart';
 // ignore: depend_on_referenced_packages
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:go_router/go_router.dart';
-import 'package:orange/orange.dart';
 import 'package:pipecheck/config/app_config.dart';
 import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:pipecheck/core/design/design_system_provider.dart';
@@ -36,17 +35,8 @@ import 'package:pipecheck/data/generated/repositories/badge.repository.dart';
 import 'package:pipecheck/data/generated/repositories/user.repository.dart';
 import 'package:pipecheck/features/settings/views/settings_view.dart';
 
-class _Snack implements SnackBarService {
-  final log = <String>[];
-  @override
-  void showSuccess(String message, {String? id, Duration? duration}) => log.add('success:$message');
-  @override
-  void showError(String message, {String? id, Duration? duration}) => log.add('error:$message');
-  @override
-  void showInfo(String message, {String? id, Duration? duration}) => log.add('info:$message');
-  @override
-  dynamic noSuchMethod(Invocation invocation) => null;
-}
+import '../../support/fake_snackbar.dart';
+import '../../support/orange_harness.dart';
 
 class _BadgeRepo extends Fake implements BadgeRepository {
   _BadgeRepo(this.items);
@@ -172,8 +162,9 @@ BadgeModel _badge(int id, {bool achieved = false}) => BadgeModel(
       condition: '{}',
     );
 
-late Directory _dir;
-late _Snack snack;
+late Directory Function() _dirOf;
+Directory get _dir => _dirOf();
+late FakeSnack snack;
 late _BadgeRepo badges;
 late _UserRepo users;
 late _BadgeService badgeService;
@@ -271,28 +262,20 @@ Future<void> _confirmRestore(WidgetTester tester) async {
 Finder _t(String s) => find.text(s);
 
 void main() {
+  _dirOf = setUpOrange('settings_view_test');
+
   setUpAll(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    _dir = await Directory.systemTemp.createTemp('settings_view_test');
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/path_provider'), (_) async => _dir.path);
     messenger.setMockMethodCallHandler(const MethodChannel('dev.fluttercommunity.plus/package_info'), (call) async => {
           'appName': 'app',
           'packageName': 'pkg',
           'version': '1.2.3',
           'buildNumber': '4',
         });
-    await Orange.init();
     // 첫 파일 I/O는 느려서(워커 기동) 복원 테스트가 시간 안에 못 끝날 수 있다 — 미리 데워 둔다.
     await File('${_dir.path}/warm').writeAsString('x');
     await File('${_dir.path}/warm').readAsString();
     dotenv.loadFromString(envString: 'TEST=1');
-  });
-
-  tearDownAll(() async {
-    try {
-      await _dir.delete(recursive: true);
-    } on FileSystemException catch (_) {}
   });
 
   setUp(() async {
@@ -300,7 +283,7 @@ void main() {
     rootBundle.evict('assets/data/badges.json');
     AppConfig.debugSetConfig({'MONTHLY': 'm', 'YEARLY': 'y', 'LIFETIME': 'l'});
     _flags();
-    snack = _Snack();
+    snack = FakeSnack();
     badges = _BadgeRepo([_badge(1), _badge(2, achieved: true)]);
     users = _UserRepo();
     badgeService = _BadgeService();
@@ -335,6 +318,11 @@ void main() {
       await _pump(tester, initial: Settings.initial().copyWith(subscriptionOpenEnded: true));
       expect(_t('Active'), findsOneWidget);
       expect(_t('Active until {}'), findsNothing);
+    });
+
+    testWidgets('만료일이 있는 구독은 그 날짜를 보여 준다', (tester) async {
+      await _pump(tester, initial: Settings.initial().copyWith(subscriptionExpiryDate: DateTime(2099, 11, 8)));
+      expect(find.textContaining('2099-11-08'), findsOneWidget);
     });
 
     testWidgets('Subscribe와 프리미엄 전용 버튼은 구독 시트를 연다', (tester) async {

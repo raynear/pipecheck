@@ -826,6 +826,8 @@
   "Purchase restored successfully": "구매가 복원되었습니다",
   "No previous purchases found": "복원할 이전 구매 내역이 없습니다",
   "Failed to restore purchase": "구매를 복원하지 못했습니다",
+  "Loading...": "불러오는 중...",
+  "Confirming your purchase. It will be applied shortly.": "구매를 확인하는 중입니다. 곧 반영됩니다.",
   "Lifetime": "평생",
   "Active": "활성"
 }

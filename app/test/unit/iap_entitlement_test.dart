@@ -1,6 +1,7 @@
 // 스토어 권리 → 프리미엄 상태 파생(순수 함수). 서비스 배선은 iap_store_test.dart.
 
 import 'package:pipecheck/core/services/in_app_purchase_service.dart';
+import 'package:pipecheck/core/state/settings.dart';
 import 'package:flutter_test/flutter_test.dart';
 // ignore: depend_on_referenced_packages
 import 'package:in_app_purchase_storekit/store_kit_2_wrappers.dart' show SK2Transaction;
@@ -24,12 +25,12 @@ void main() {
     });
 
     test('만료된 구독은 권리가 아니다', () {
-      expect(_derive([_e('m', exp: _now.subtract(const Duration(seconds: 1)))]).isActive, isFalse);
+      expect(_derive([_e('m', exp: _now.subtract(const Duration(seconds: 1)))]).isActiveAt(_now), isFalse);
     });
 
     test('환불(revoked)은 만료일이 남아 있어도 무시한다', () {
       final r = _derive([_e('y', exp: _now.add(const Duration(days: 300)), revoked: true)]);
-      expect(r.isActive, isFalse);
+      expect(r.isActiveAt(_now), isFalse);
     });
 
     test('평생+월간은 어떤 순서든 평생을 유지하고 만료일은 최댓값', () {
@@ -56,7 +57,7 @@ void main() {
       final r = _derive([_e('y', openEnded: true)]);
       expect(r.subscriptionExpiry, isNull);
       expect(r.subscriptionOpenEnded, isTrue);
-      expect(r.isActive, isTrue);
+      expect(r.isActiveAt(_now), isTrue);
     });
 
     test('열린 구독과 날짜 있는 구독이 섞이면 둘 다 반영한다', () {
@@ -67,18 +68,18 @@ void main() {
     });
 
     test('환불된 열린 구독은 권리가 아니다', () {
-      expect(_derive([_e('y', openEnded: true, revoked: true)]).isActive, isFalse);
+      expect(_derive([_e('y', openEnded: true, revoked: true)]).isActiveAt(_now), isFalse);
     });
 
     test('만료일을 모르는 iOS 구독은 권리가 아니다(fail-closed) — 재조회마다 연장되지 않는다', () {
       final r = _derive([_e('m'), _e('y')]);
-      expect(r.isActive, isFalse);
+      expect(r.isActiveAt(_now), isFalse);
       expect(r.subscriptionOpenEnded, isFalse);
     });
 
     test('모르는 상품과 빈 목록은 권리 없음', () {
-      expect(_derive([_e('zzz', exp: _now.add(const Duration(days: 9)))]).isActive, isFalse);
-      expect(_derive(const []).isActive, isFalse);
+      expect(_derive([_e('zzz', exp: _now.add(const Duration(days: 9)))]).isActiveAt(_now), isFalse);
+      expect(_derive(const []).isActiveAt(_now), isFalse);
     });
   });
 
@@ -109,13 +110,13 @@ void main() {
       final exp = _now.add(const Duration(days: 20)).millisecondsSinceEpoch;
       final e = entitlementFromSk2(tx(json: '{"expiresDate":$exp,"isUpgraded":true}'));
       expect(e.revoked, isTrue);
-      expect(_derive([e]).isActive, isFalse);
+      expect(_derive([e]).isActiveAt(_now), isFalse);
     });
 
     test('JSON을 못 읽으면 만료일 모름 → 활성이 아니다', () {
       final e = entitlementFromSk2(tx(json: 'not json', expiration: '2026-11-08 09:30:00'));
       expect(e.expiresAt, isNull);
-      expect(_derive([e]).isActive, isFalse);
+      expect(_derive([e]).isActiveAt(_now), isFalse);
     });
   });
 

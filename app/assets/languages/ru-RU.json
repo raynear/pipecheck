@@ -826,6 +826,8 @@
   "Purchase restored successfully": "Покупка успешно восстановлена",
   "No previous purchases found": "Предыдущие покупки не найдены",
   "Failed to restore purchase": "Не удалось восстановить покупку",
+  "Loading...": "Загрузка...",
+  "Confirming your purchase. It will be applied shortly.": "Покупка подтверждается. Она будет применена в ближайшее время.",
   "Lifetime": "Навсегда",
   "Active": "Активна"
 }

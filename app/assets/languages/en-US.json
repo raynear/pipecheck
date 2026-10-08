@@ -816,6 +816,8 @@
   "Purchase restored successfully": "Purchase restored successfully",
   "No previous purchases found": "No previous purchases found",
   "Failed to restore purchase": "Failed to restore purchase",
+  "Loading...": "Loading...",
+  "Confirming your purchase. It will be applied shortly.": "Confirming your purchase. It will be applied shortly.",
   "Lifetime": "Lifetime",
   "Active": "Active"
 }
