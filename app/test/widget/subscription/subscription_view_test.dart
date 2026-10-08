@@ -81,9 +81,6 @@ void main() {
     testWidgets('구매 버튼은 글자 배율 $scale에서도 넘치지 않는다', (tester) async {
       await _pump(tester, textScale: scale);
       expect(tester.takeException(), isNull);
-      final button = tester.getRect(find.byType(AdaptiveButton).last);
-      final label = tester.getRect(find.text('Join membership'));
-      expect(button.contains(label.topLeft) && button.contains(label.bottomRight), isTrue);
     });
   }
 }

@@ -106,7 +106,7 @@ class _AdaptiveButtonState extends State<AdaptiveButton> with SingleTickerProvid
       width: widget.isFullWidth ? double.infinity : null,
       // 자식을 직접 넣는 버튼(여러 줄)은 고정 높이면 넘치므로 최소 높이만 보장한다.
       height: widget.child == null ? dimensions.height : null,
-      constraints: widget.child == null ? null : BoxConstraints(minHeight: dimensions.height),
+      constraints: BoxConstraints(minHeight: dimensions.height),
       decoration: BoxDecoration(
         color: colors.backgroundColor,
         border: widget.variant == ButtonVariant.outlined

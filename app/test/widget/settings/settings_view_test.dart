@@ -330,7 +330,7 @@ void main() {
       final past = DateTime.now().subtract(const Duration(days: 1));
       await _pump(tester, initial: Settings.initial().copyWith(subscriptionExpiryDate: past));
       expect(_t('Active'), findsOneWidget);
-      expect(_t('Active until {}'), findsNothing);
+      expect(find.textContaining('Active until'), findsNothing);
       expect(find.textContaining(DateFormat('yyyy-MM-dd').format(past)), findsNothing);
     });
 
