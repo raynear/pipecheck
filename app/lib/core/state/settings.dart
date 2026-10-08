@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:pipecheck/config/app_config.dart';
 import 'package:pipecheck/core/design/design_system_provider.dart';
-import 'package:flutter/foundation.dart' show PlatformDispatcher;
+import 'package:flutter/foundation.dart' show PlatformDispatcher, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,9 +100,12 @@ abstract class Settings with _$Settings {
     DateTime? subscriptionExpiryDate,
     // 평생 구매(비소모성) — 구독 만료일과 따로 둔다. 구독이 끝나도 평생은 남는다.
     @Default(false) bool hasLifetime,
-    // 스토어가 만료일을 안 주는 구독(Google Play) — subscriptionExpiryDate는 "다음 재조회까지"의
-    // 임시 창이다. 실제 만료일이 아니다.
+    // 스토어가 만료일을 안 주는 구독(Google Play) — 날짜 없이, 성공한 스토어 조회가
+    // "소유 안 함"이라고 말할 때까지 활성이다.
     @Default(false) bool subscriptionOpenEnded,
+    // 개발 확인용 프리미엄 덮어쓰기 — 실제 권리(hasLifetime·구독)와 완전히 별개이고,
+    // 스토어 재조회가 건드리지 않는다. devOverrideAllowed인 빌드에서만 효력이 있다.
+    @Default(false) bool devPremium,
     required int appLaunchCount,
     @Default(DesignSystemType.material3) DesignSystemType designSystem,
   }) = _Settings;
@@ -144,6 +147,7 @@ abstract class Settings with _$Settings {
 
       final bool hasLifetime = Orange.getBool('hasLifetime') ?? false;
       final bool subscriptionOpenEnded = Orange.getBool('subscriptionOpenEnded') ?? false;
+      final bool devPremium = Orange.getBool('devPremium') ?? false;
 
       final int appLaunchCount = Orange.getInt('appLaunchCount') ?? 0;
 
@@ -166,6 +170,7 @@ abstract class Settings with _$Settings {
         subscriptionExpiryDate: subscriptionExpiryDate,
         hasLifetime: hasLifetime,
         subscriptionOpenEnded: subscriptionOpenEnded,
+        devPremium: devPremium,
         appLaunchCount: appLaunchCount,
         designSystem: designSystem,
       );
@@ -255,6 +260,7 @@ extension SettingsExtension on Settings {
       Orange.setString('subscriptionExpiryDate', subscriptionExpiryDate?.toIso8601String() ?? '');
       Orange.setBool('hasLifetime', hasLifetime);
       Orange.setBool('subscriptionOpenEnded', subscriptionOpenEnded);
+      Orange.setBool('devPremium', devPremium);
       Orange.setInt('appLaunchCount', appLaunchCount);
       Orange.setInt('designSystem', designSystem.index);
     } catch (e) {
@@ -266,9 +272,14 @@ extension SettingsExtension on Settings {
     // 열린 구독(Google Play)은 성공한 조회가 "소유 안 함"이라고 말할 때까지 날짜와 무관하게 활성.
     return hasLifetime ||
         subscriptionOpenEnded ||
+        (devPremium && devOverrideAllowed) ||
         (subscriptionExpiryDate != null && subscriptionExpiryDate!.isAfter(DateTime.now()));
   }
 }
+
+/// 개발 프리미엄 덮어쓰기를 인정하는 빌드인가 — 디버그 또는 `-dev` 접미사 내부 배포 빌드.
+/// 스토어 빌드에서는 저장된 devPremium 값이 있어도 효력이 없다. main()이 버전을 읽어 켠다.
+bool devOverrideAllowed = kDebugMode;
 
 // 지원되는 로케일 초기화 제공자
 final supportedLocalesProvider = FutureProvider<List<Locale>>((ref) async {
@@ -302,19 +313,6 @@ class SettingsNotifier extends Notifier<Settings> {
     logger.d('앱 실행 횟수: ${newSettings.appLaunchCount}');
   }
 
-  Future<void> clearSingleSetting({
-    bool? subscriptionExpiryDate,
-    bool? currentHabitExecution,
-  }) async {
-    if (subscriptionExpiryDate == true) {
-      await changeSettings(state.copyWith(
-        subscriptionExpiryDate: null,
-        hasLifetime: false,
-        subscriptionOpenEnded: false,
-      ));
-    }
-  }
-
   Future<void> updateSingleSetting({
     bool? onBoard,
     ThemeMode? displayMode,
@@ -328,7 +326,6 @@ class SettingsNotifier extends Notifier<Settings> {
     bool? useNotification,
     bool? useReminder,
     TimeOfDay? reminderTime,
-    DateTime? subscriptionExpiryDate,
     DesignSystemType? designSystem,
   }) async {
     final newSettings = Settings(
@@ -344,9 +341,10 @@ class SettingsNotifier extends Notifier<Settings> {
       useNotification: useNotification ?? state.useNotification,
       useReminder: useReminder ?? state.useReminder,
       reminderTime: reminderTime ?? state.reminderTime,
-      subscriptionExpiryDate: subscriptionExpiryDate ?? state.subscriptionExpiryDate,
+      subscriptionExpiryDate: state.subscriptionExpiryDate,
       hasLifetime: state.hasLifetime,
       subscriptionOpenEnded: state.subscriptionOpenEnded,
+      devPremium: state.devPremium,
       appLaunchCount: state.appLaunchCount,
       designSystem: designSystem ?? state.designSystem,
     );
@@ -361,6 +359,9 @@ class SettingsNotifier extends Notifier<Settings> {
       logger.e('Failed to change settings: $e');
     }
   }
+
+  /// 개발용 프리미엄 토글 — 실제 권리 필드는 건드리지 않는다.
+  Future<void> setDevPremium(bool value) => changeSettings(state.copyWith(devPremium: value));
 
   /// 스토어를 조회한 결과로 구독 권리를 통째로 맞춘다(만료일 null = 구독 없음).
   /// 여러 구매를 먼저 하나의 권리로 합친 값이 들어오므로 덮어써도 순서에 안 흔들린다.

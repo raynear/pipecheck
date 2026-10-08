@@ -818,5 +818,14 @@
     }
   },
   "• Purchases are made through your App Store account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.": "• Purchases are made through your App Store account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.",
-  "• Subscription will automatically renew unless canceled at least 24 hours before the end of the current period": "• サブスクリプションは、現在の期間が終了する24時間前までにキャンセルされない限り、自動的に更新されます"
+  "• Subscription will automatically renew unless canceled at least 24 hours before the end of the current period": "• サブスクリプションは、現在の期間が終了する24時間前までにキャンセルされない限り、自動的に更新されます",
+  "Purchase failed": "購入に失敗しました",
+  "Failed to activate subscription": "サブスクリプションを有効化できませんでした",
+  "Unknown subscription type": "不明なサブスクリプションの種類です",
+  "{} activated": "{}を有効にしました",
+  "Purchase restored successfully": "購入を復元しました",
+  "No previous purchases found": "復元できる過去の購入が見つかりません",
+  "Failed to restore purchase": "購入を復元できませんでした",
+  "Lifetime": "買い切り",
+  "Active": "有効"
 }

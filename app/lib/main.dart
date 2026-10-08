@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:utils/utils.dart';
 
 /// 애플리케이션의 진입점입니다.
@@ -38,6 +39,8 @@ void main() async {
       (route) => rootNavigatorKey.currentContext?.go(route);
 
   final appConfig = await AppConfig().initialize();
+  // 개발 프리미엄 덮어쓰기는 디버그 또는 `-dev` 내부 배포 빌드에서만 인정한다.
+  devOverrideAllowed = kDebugMode || (await PackageInfo.fromPlatform()).version.contains('-dev');
   final systemLocale = WidgetsBinding.instance.platformDispatcher.locale;
   // languageCode 기준 매칭 — 정확일치(contains)는 country가 다른 기기 로케일
   // (예: 'ar-EG' vs 지원 'ar', 'en-GB' vs 'en-US')을 놓쳐 영어로 강제 폴백시켜

@@ -52,15 +52,22 @@ void main() {
       expect(r.subscriptionExpiry, isNull);
     });
 
-    test('만료일을 안 주는 구독(Google Play)은 재조회 창만큼만 활성이고 임시 창으로 표시된다', () {
+    test('만료일을 안 주는 구독(Google Play)은 시간 창 없이 활성이고 날짜를 지어내지 않는다', () {
       final r = _derive([_e('y', openEnded: true)]);
-      expect(r.subscriptionExpiry, _now.add(const Duration(days: 7)));
+      expect(r.subscriptionExpiry, isNull);
       expect(r.subscriptionOpenEnded, isTrue);
+      expect(r.isActive, isTrue);
     });
 
-    test('스토어가 준 실제 만료일이 임시 창보다 길면 임시 창이 아니다', () {
-      final r = _derive([_e('y', openEnded: true), _e('m', exp: _now.add(const Duration(days: 30)))]);
-      expect(r.subscriptionOpenEnded, isFalse);
+    test('열린 구독과 날짜 있는 구독이 섞이면 둘 다 반영한다', () {
+      final exp = _now.add(const Duration(days: 30));
+      final r = _derive([_e('y', openEnded: true), _e('m', exp: exp)]);
+      expect(r.subscriptionOpenEnded, isTrue);
+      expect(r.subscriptionExpiry, exp);
+    });
+
+    test('환불된 열린 구독은 권리가 아니다', () {
+      expect(_derive([_e('y', openEnded: true, revoked: true)]).isActive, isFalse);
     });
 
     test('만료일을 모르는 iOS 구독은 권리가 아니다(fail-closed) — 재조회마다 연장되지 않는다', () {

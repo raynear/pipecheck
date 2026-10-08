@@ -62,8 +62,8 @@ class StoreEntitlement {
   final bool openEnded;
 }
 
-/// 모든 권리를 합친 최종 프리미엄 상태. [subscriptionExpiry]가 null이면 활성 구독이 없다.
-/// [subscriptionOpenEnded]면 그 값은 실제 만료일이 아니라 다음 재조회까지의 임시 창이다.
+/// 모든 권리를 합친 최종 프리미엄 상태. [subscriptionExpiry]는 스토어가 준 실제 만료일만
+/// 담는다. [subscriptionOpenEnded]는 만료일을 안 주는 구독을 보유 중이라는 뜻이다(날짜 없음).
 class PremiumEntitlement {
   const PremiumEntitlement({
     required this.hasLifetime,
@@ -75,15 +75,14 @@ class PremiumEntitlement {
   final DateTime? subscriptionExpiry;
   final bool subscriptionOpenEnded;
 
-  bool get isActive => hasLifetime || subscriptionExpiry != null;
+  bool get hasSubscription => subscriptionOpenEnded || subscriptionExpiry != null;
+
+  bool get isActive => hasLifetime || hasSubscription;
 }
 
-/// 만료일을 안 주는 구독의 임시 창. 활성 여부는 openEnded 플래그가 정하고, 이 값은 만료일을 null이 아니게 하는 용도다.
-const _openEndedWindow = Duration(days: 7);
-
 /// 스토어 권리 목록 → 프리미엄 상태. 순서와 무관하다(평생·월간이 섞여도, 옛 갱신이
-/// 뒤에 와도 결과가 같다). 만료일을 로컬에서 더해 만들지 않는다 — 스토어가 준 값만 쓰고,
-/// 만료일을 주지 않는 구독([StoreEntitlement.openEnded], Google Play)만 다음 재조회까지
+/// 뒤에 와도 결과가 같다). 만료일을 로컬에서 만들어 내지 않는다 — 스토어가 준 값만 쓰고,
+/// 만료일을 주지 않는 구독([StoreEntitlement.openEnded], Google Play)은 시간 창 없이
 /// 성공한 조회가 소유하지 않는다고 말할 때까지 활성으로 본다. 만료일을 모르는 그 밖의 구독은 권리가 아니다.
 PremiumEntitlement derivePremiumEntitlement(
   Iterable<StoreEntitlement> items, {
@@ -98,10 +97,11 @@ PremiumEntitlement derivePremiumEntitlement(
     if (e.productId == productIds['lifetime']) {
       lifetime = true;
     } else if (e.productId == productIds['monthly'] || e.productId == productIds['yearly']) {
-      final until = e.expiresAt ?? (e.openEnded ? now.add(_openEndedWindow) : null);
-      if (until != null && until.isAfter(now) && (expiry == null || until.isAfter(expiry))) {
+      final until = e.expiresAt;
+      if (until == null) {
+        openEnded = openEnded || e.openEnded;
+      } else if (until.isAfter(now) && (expiry == null || until.isAfter(expiry))) {
         expiry = until;
-        openEnded = e.expiresAt == null;
       }
     }
   }
@@ -139,12 +139,26 @@ Future<List<StoreEntitlement>> fetchStoreEntitlements() async {
       return (await SK2Transaction.transactions()).map(entitlementFromSk2).toList();
     case TargetPlatform.android:
       final past = await _androidPast(iap);
+      await _completeUnacknowledged(iap, past);
       return past
           .where((p) => p.status == PurchaseStatus.purchased)
           .map((p) => StoreEntitlement(productId: p.productID, openEnded: true))
           .toList();
     default:
       return const [];
+  }
+}
+
+/// 앱이 꺼진 사이 끝나지 못한 구매(프로세스 종료, 대기 결제 승인)는 스트림에 다시 안 올 수
+/// 있다. 확인(acknowledge)을 안 하면 Google Play가 3일 뒤 자동 환불하므로 조회 때 마무리한다.
+Future<void> _completeUnacknowledged(InAppPurchase iap, List<GooglePlayPurchaseDetails> past) async {
+  for (final p in past) {
+    if (p.status != PurchaseStatus.purchased || !p.pendingCompletePurchase) continue;
+    try {
+      await iap.completePurchase(p);
+    } catch (e) {
+      logger.e('completePurchase failed for ${p.productID}: $e');
+    }
   }
 }
 
@@ -216,7 +230,7 @@ class InAppPurchaseService {
       if (purchaseDetails.status == PurchaseStatus.pending) continue;
       if (purchaseDetails.status == PurchaseStatus.error) {
         logger.e('Purchase error: ${purchaseDetails.error}');
-        snackBarService?.showError('in_app_purchase.purchaseFailed'.tr());
+        snackBarService?.showError('Purchase failed'.tr());
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
         // 복원은 restorePurchase가 직접 한 번 조회하므로 구매만 여기서 조회한다.
@@ -238,7 +252,7 @@ class InAppPurchaseService {
     if (!needsRefresh) return;
     final entitlement = await refreshEntitlement();
     if (entitlement == null) {
-      snackBarService?.showError('Failed to activate subscription');
+      snackBarService?.showError('Failed to activate subscription'.tr());
       return;
     }
     for (final productId in newlyPurchased) {
@@ -246,10 +260,16 @@ class InAppPurchaseService {
       if (productId != _buying) continue;
       _buying = null;
       final role = AppConfig().productIds.entries.firstWhereOrNull((e) => e.value == productId)?.key;
-      if (role == null) {
-        snackBarService?.showError('Unknown subscription type');
-      } else if (role == 'lifetime' ? entitlement.hasLifetime : entitlement.subscriptionExpiry != null) {
-        snackBarService?.showSuccess('${role[0].toUpperCase()}${role.substring(1)} subscription activated');
+      final name = switch (role) {
+        'monthly' => 'Monthly Subscription',
+        'yearly' => 'Yearly Subscription',
+        'lifetime' => 'Lifetime Subscription',
+        _ => null,
+      };
+      if (name == null) {
+        snackBarService?.showError('Unknown subscription type'.tr());
+      } else if (role == 'lifetime' ? entitlement.hasLifetime : entitlement.hasSubscription) {
+        snackBarService?.showSuccess('{} activated'.tr(args: [name.tr()]));
       }
     }
   }
@@ -334,15 +354,15 @@ class InAppPurchaseService {
       await _inAppPurchase.restorePurchases();
       final entitlement = await refreshEntitlement();
       if (entitlement == null) {
-        snackBarService?.showError('Failed to restore purchase');
+        snackBarService?.showError('Failed to restore purchase'.tr());
       } else if (entitlement.isActive) {
-        snackBarService?.showSuccess('Purchase restored successfully');
+        snackBarService?.showSuccess('Purchase restored successfully'.tr());
       } else {
-        snackBarService?.showInfo('No previous purchases found');
+        snackBarService?.showInfo('No previous purchases found'.tr());
       }
     } catch (e) {
       logger.e('Failed to restore purchase: $e');
-      snackBarService?.showError('Failed to restore purchase');
+      snackBarService?.showError('Failed to restore purchase'.tr());
     }
   }
 

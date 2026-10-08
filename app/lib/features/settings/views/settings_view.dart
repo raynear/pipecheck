@@ -107,7 +107,8 @@ class _SettingsState extends ConsumerState<SettingsView> {
 
     final badgeData = badgesData.firstWhere((badge) => badge['id'] == badgeId, orElse: () => null);
     if (badgeData != null) {
-      final existingBadge = await badgeRepository.getById(badgeData['id']);
+      // badges.json의 id는 문자열(badge_id)이라 정수 PK인 getById로는 찾을 수 없다.
+      final existingBadge = (await badgeRepository.findByField('badge_id', badgeData['id'])).firstOrNull;
       if (existingBadge != null) {
         // 뱃지 업데이트
         if (!mounted) return;
@@ -130,7 +131,7 @@ class _SettingsState extends ConsumerState<SettingsView> {
           type: BadgeType.values[badgeData['type'] as int],
           isAchieved: true,
           earnedDate: DateTime.now(),
-          condition: badgeData['condition'],
+          condition: jsonEncode(badgeData['condition']), // badges.json에선 객체, 모델에선 문자열
           createdAt: DateTime.now(),
         );
 
@@ -546,13 +547,9 @@ class _SettingsState extends ConsumerState<SettingsView> {
                     //     child: SText('Remove All Geofences')),
                     SElevatedButton(
                         onPressed: () {
-                          final settings = ref.read(settingsProvider);
-                          if (settings.isSubscriptionActive) {
-                            ref.read(settingsProvider.notifier).clearSingleSetting(subscriptionExpiryDate: true);
-                          } else {
-                            final expiryDate = DateTime.now().add(const Duration(days: 30));
-                            ref.read(settingsProvider.notifier).updateSingleSetting(subscriptionExpiryDate: expiryDate);
-                          }
+                          // 실제 구매 권리와 별개인 개발 덮어쓰기만 뒤집는다.
+                          final notifier = ref.read(settingsProvider.notifier);
+                          notifier.setDevPremium(!ref.read(settingsProvider).devPremium);
                         },
                         child: SText('Toggle Purchase')),
                     const Divider(thickness: 2),

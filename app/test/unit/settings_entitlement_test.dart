@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,12 +54,10 @@ void main() {
     expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
   });
 
-  test('열린 구독은 임시 창 날짜가 지나도(8일 뒤 조회 실패) 성공한 조회가 부정하기 전까지 활성', () async {
-    await n.applyStoreEntitlement(
-        hasLifetime: false,
-        subscriptionExpiry: DateTime.now().subtract(const Duration(days: 1)),
-        subscriptionOpenEnded: true);
+  test('열린 구독은 날짜 없이, 성공한 조회가 부정하기 전까지 활성', () async {
+    await n.applyStoreEntitlement(hasLifetime: false, subscriptionExpiry: null, subscriptionOpenEnded: true);
     expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
+    expect(c.read(settingsProvider).subscriptionExpiryDate, isNull);
     await n.applyStoreEntitlement(hasLifetime: false, subscriptionExpiry: null);
     expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
   });
@@ -66,10 +65,12 @@ void main() {
   test('권리 값은 저장했다가 다시 읽어도 그대로(재시작 후 유지)', () async {
     await n.applyStoreEntitlement(
         hasLifetime: true, subscriptionExpiry: future, subscriptionOpenEnded: true);
+    await n.setDevPremium(true);
     final loaded = Settings.fromOrange();
     expect(loaded.hasLifetime, isTrue);
     expect(loaded.subscriptionOpenEnded, isTrue);
     expect(loaded.subscriptionExpiryDate, future);
+    expect(loaded.devPremium, isTrue);
   });
 
   test('다른 설정을 바꿔도 권리 값은 지워지지 않는다', () async {
@@ -87,14 +88,40 @@ void main() {
     expect(identical(c.read(settingsProvider), before), isTrue);
   });
 
-  test('clearSingleSetting(subscriptionExpiryDate)는 평생·임시 창까지 비운다', () async {
-    await n.applyStoreEntitlement(
-        hasLifetime: true, subscriptionExpiry: future, subscriptionOpenEnded: true);
-    await n.clearSingleSetting(subscriptionExpiryDate: true);
-    final s = c.read(settingsProvider);
-    expect(s.subscriptionExpiryDate, isNull);
-    expect(s.hasLifetime, isFalse);
-    expect(s.subscriptionOpenEnded, isFalse);
+  group('개발 프리미엄 덮어쓰기(devPremium)', () {
+    tearDown(() => devOverrideAllowed = kDebugMode);
+
+    test('실제 권리와 별개: 켜고 꺼도 평생·구독 값을 건드리지 않는다', () async {
+      await n.applyStoreEntitlement(
+          hasLifetime: true, subscriptionExpiry: future, subscriptionOpenEnded: true);
+      await n.setDevPremium(true);
+      await n.setDevPremium(false);
+      final s = c.read(settingsProvider);
+      expect(s.hasLifetime, isTrue);
+      expect(s.subscriptionExpiryDate, future);
+      expect(s.subscriptionOpenEnded, isTrue);
+      expect(s.isSubscriptionActive, isTrue);
+    });
+
+    test('스토어 재조회가 지우지 않는다', () async {
+      await n.setDevPremium(true);
+      await n.applyStoreEntitlement(hasLifetime: false, subscriptionExpiry: null);
+      expect(c.read(settingsProvider).devPremium, isTrue);
+    });
+
+    test('허용된 빌드에서만 효력이 있다', () async {
+      await n.setDevPremium(true);
+      devOverrideAllowed = true;
+      expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
+      devOverrideAllowed = false;
+      expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
+    });
+
+    test('다른 설정을 바꿔도 유지된다', () async {
+      await n.setDevPremium(true);
+      await n.updateSingleSetting(bold: true);
+      expect(c.read(settingsProvider).devPremium, isTrue);
+    });
   });
 
   test('앱 실행 횟수를 올리고, 컨버터는 값을 왕복시킨다', () async {

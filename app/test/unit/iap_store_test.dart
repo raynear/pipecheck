@@ -22,7 +22,8 @@ import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:orange/orange.dart';
 
 
-PurchaseWrapper _wrapper(String product, PurchaseStateWrapper state) => PurchaseWrapper(
+PurchaseWrapper _wrapper(String product, PurchaseStateWrapper state, {bool acknowledged = true}) =>
+    PurchaseWrapper(
       orderId: 'o-$product',
       packageName: 'pkg',
       purchaseTime: 1,
@@ -31,7 +32,7 @@ PurchaseWrapper _wrapper(String product, PurchaseStateWrapper state) => Purchase
       products: [product],
       isAutoRenewing: true,
       originalJson: '{}',
-      isAcknowledged: true,
+      isAcknowledged: acknowledged,
       purchaseState: state,
     );
 
@@ -68,8 +69,13 @@ class _FakePlatform extends InAppPurchasePlatform {
   final completed = <PurchaseDetails>[];
   int restoreCalls = 0;
 
+  bool completeThrows = false;
+
   @override
-  Future<void> completePurchase(PurchaseDetails purchase) async => completed.add(purchase);
+  Future<void> completePurchase(PurchaseDetails purchase) async {
+    if (completeThrows) throw StateError('ack failed');
+    completed.add(purchase);
+  }
 
   @override
   Future<void> restorePurchases({String? applicationUserName}) async => restoreCalls++;
@@ -296,13 +302,13 @@ void main() {
 
     Future<void> pump() => Future<void>.delayed(const Duration(milliseconds: 20));
 
-    test('구매 이벤트는 마무리(completePurchase)하고 임시 창 구독으로 반영한다', () async {
+    test('구매 이벤트는 마무리(completePurchase)하고 열린 구독으로 반영한다', () async {
       addition.purchases = [_wrapper('m', PurchaseStateWrapper.purchased)];
       platform.controller.add([_purchase('m', PurchaseStatus.purchased)]);
       await pump();
       expect(platform.completed, hasLength(1));
       final s = c.read(settingsProvider);
-      expect(s.subscriptionExpiryDate, _now.add(const Duration(days: 7)));
+      expect(s.subscriptionExpiryDate, isNull);
       expect(s.subscriptionOpenEnded, isTrue);
     });
 
@@ -350,6 +356,51 @@ void main() {
       await pump();
       expect(platform.completed, hasLength(1));
       expect(addition.calls, 0);
+    });
+
+    for (final status in [PurchaseStatus.error, PurchaseStatus.canceled, PurchaseStatus.restored]) {
+      test('$status 이벤트도 pendingCompletePurchase면 정확히 한 번 마무리한다', () async {
+        platform.controller.add([_purchase('m', status)]);
+        await pump();
+        expect(platform.completed, hasLength(1));
+        expect(platform.completed.single.status, status);
+        expect(addition.calls, 0, reason: '구매 완료만 조회를 건다');
+        if (status == PurchaseStatus.error) expect(snack.log, ['error:Purchase failed']);
+      });
+    }
+
+    test('이미 마무리된(pendingCompletePurchase=false) 거래는 다시 마무리하지 않는다', () async {
+      platform.controller.add([_purchase('m', PurchaseStatus.canceled)..pendingCompletePurchase = false]);
+      await pump();
+      expect(platform.completed, isEmpty);
+    });
+
+    group('Android 미확인 구매 (프로세스 종료·대기 결제 승인 뒤)', () {
+      test('조회 때 확인 안 된 purchased 구매를 마무리하고 권리는 그대로 반영한다', () async {
+        addition.purchases = [_wrapper('m', PurchaseStateWrapper.purchased, acknowledged: false)];
+        await service.refreshEntitlement();
+        expect(platform.completed.map((p) => p.productID), ['m']);
+        expect(c.read(settingsProvider).subscriptionOpenEnded, isTrue);
+      });
+
+      test('이미 확인된 구매와 대기(pending) 구매는 마무리하지 않는다', () async {
+        addition.purchases = [
+          _wrapper('m', PurchaseStateWrapper.purchased),
+          _wrapper('y', PurchaseStateWrapper.pending, acknowledged: false),
+        ];
+        await service.refreshEntitlement();
+        expect(platform.completed, isEmpty);
+      });
+
+      test('마무리가 실패해도 조회는 권리를 반영하고 다음 조회에서 다시 시도한다', () async {
+        platform.completeThrows = true;
+        addition.purchases = [_wrapper('l', PurchaseStateWrapper.purchased, acknowledged: false)];
+        expect(await service.refreshEntitlement(), isNotNull);
+        expect(c.read(settingsProvider).hasLifetime, isTrue);
+        platform.completeThrows = false;
+        await service.refreshEntitlement();
+        expect(platform.completed.map((p) => p.productID), ['l']);
+      });
     });
 
     test('사용자가 시작하지 않은 구매(자동 갱신)는 성공 알림을 띄우지 않는다', () async {
