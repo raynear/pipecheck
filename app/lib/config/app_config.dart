@@ -450,6 +450,11 @@ class AppConfig {
   // 전체 config에 접근하기 위한 getter
   static Map<String, dynamic> get config => Map.unmodifiable(_config);
 
+  /// 테스트 전용 — env(.env.*) 로드 없이 config 값을 심는다.
+  @visibleForTesting
+  static void debugSetConfig(Map<String, dynamic> config) =>
+      _config = Map<String, dynamic>.from(config);
+
   // 특정 키로 config 값을 가져오는 generic getter
   static T? getValue<T>(String key) => _config[key] as T?;
 }

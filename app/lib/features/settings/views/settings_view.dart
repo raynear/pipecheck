@@ -70,7 +70,6 @@ class _SettingsState extends ConsumerState<SettingsView> {
       setState(() {
         _packageInfo = packageInfo;
       });
-      ref.read(settingsProvider.notifier).checkAndUpdateSubscription();
     });
   }
 

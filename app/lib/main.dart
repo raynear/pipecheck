@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:pipecheck/config/app_config.dart';
 import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:pipecheck/core/design/design_system_provider.dart';
@@ -6,6 +8,7 @@ import 'package:pipecheck/core/router.dart';
 import 'package:pipecheck/core/services/badge_service.dart';
 import 'package:pipecheck/core/services/deep_link_service.dart';
 import 'package:pipecheck/core/services/force_update_service.dart';
+import 'package:pipecheck/core/services/in_app_purchase_service.dart';
 import 'package:pipecheck/core/services/maintenance_service.dart';
 import 'package:pipecheck/core/services/notification/notification.dart';
 import 'package:pipecheck/core/services/snackbar_service.dart';
@@ -98,6 +101,9 @@ class MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // 부팅 때 IAP 서비스를 바로 만든다 — 앱이 꺼진 사이 도착한 거래를 받고 스토어 권리를 맞춘다.
+    ref.read(inAppPurchaseServiceProvider);
     
     // 알림 기능이 활성화된 경우에만 알림 서비스 사용
     if (AppFeatureConfig.isNotificationEnabled) {
@@ -256,6 +262,8 @@ class MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
     }
     if (state == AppLifecycleState.resumed) {
       logger.i('resumed');
+      // 갱신·해지·환불은 앱이 꺼진 사이에 일어난다 — 돌아올 때 스토어 기준으로 다시 맞춘다.
+      unawaited(ref.read(inAppPurchaseServiceProvider)?.refreshEntitlement());
       // 백그라운드 알림 제거 (메서드 내부에서 설정 확인)
       await _notification?.removeBackgroundNotification();
 

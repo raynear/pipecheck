@@ -98,6 +98,11 @@ abstract class Settings with _$Settings {
     required bool useReminder,
     @TimeOfDayConverter() required TimeOfDay reminderTime,
     DateTime? subscriptionExpiryDate,
+    // 평생 구매(비소모성) — 구독 만료일과 따로 둔다. 구독이 끝나도 평생은 남는다.
+    @Default(false) bool hasLifetime,
+    // 스토어가 만료일을 안 주는 구독(Google Play) — subscriptionExpiryDate는 "다음 재조회까지"의
+    // 임시 창이다. 실제 만료일이 아니다.
+    @Default(false) bool subscriptionOpenEnded,
     required int appLaunchCount,
     @Default(DesignSystemType.material3) DesignSystemType designSystem,
   }) = _Settings;
@@ -137,6 +142,9 @@ abstract class Settings with _$Settings {
               ? DateTime.parse(subscriptionExpiryDateString)
               : null;
 
+      final bool hasLifetime = Orange.getBool('hasLifetime') ?? false;
+      final bool subscriptionOpenEnded = Orange.getBool('subscriptionOpenEnded') ?? false;
+
       final int appLaunchCount = Orange.getInt('appLaunchCount') ?? 0;
 
       final int designSystemIndex = Orange.getInt('designSystem') ?? 0;
@@ -156,6 +164,8 @@ abstract class Settings with _$Settings {
         useReminder: useReminder,
         reminderTime: reminderTime,
         subscriptionExpiryDate: subscriptionExpiryDate,
+        hasLifetime: hasLifetime,
+        subscriptionOpenEnded: subscriptionOpenEnded,
         appLaunchCount: appLaunchCount,
         designSystem: designSystem,
       );
@@ -243,6 +253,8 @@ extension SettingsExtension on Settings {
       Orange.setInt('reminderHour', reminderTime.hour);
       Orange.setInt('reminderMinute', reminderTime.minute);
       Orange.setString('subscriptionExpiryDate', subscriptionExpiryDate?.toIso8601String() ?? '');
+      Orange.setBool('hasLifetime', hasLifetime);
+      Orange.setBool('subscriptionOpenEnded', subscriptionOpenEnded);
       Orange.setInt('appLaunchCount', appLaunchCount);
       Orange.setInt('designSystem', designSystem.index);
     } catch (e) {
@@ -251,7 +263,7 @@ extension SettingsExtension on Settings {
   }
 
   bool get isSubscriptionActive {
-    return subscriptionExpiryDate != null && subscriptionExpiryDate!.isAfter(DateTime.now());
+    return hasLifetime || (subscriptionExpiryDate != null && subscriptionExpiryDate!.isAfter(DateTime.now()));
   }
 }
 
@@ -294,6 +306,8 @@ class SettingsNotifier extends Notifier<Settings> {
     if (subscriptionExpiryDate == true) {
       await changeSettings(state.copyWith(
         subscriptionExpiryDate: null,
+        hasLifetime: false,
+        subscriptionOpenEnded: false,
       ));
     }
   }
@@ -328,6 +342,8 @@ class SettingsNotifier extends Notifier<Settings> {
       useReminder: useReminder ?? state.useReminder,
       reminderTime: reminderTime ?? state.reminderTime,
       subscriptionExpiryDate: subscriptionExpiryDate ?? state.subscriptionExpiryDate,
+      hasLifetime: state.hasLifetime,
+      subscriptionOpenEnded: state.subscriptionOpenEnded,
       appLaunchCount: state.appLaunchCount,
       designSystem: designSystem ?? state.designSystem,
     );
@@ -343,39 +359,25 @@ class SettingsNotifier extends Notifier<Settings> {
     }
   }
 
-  Future<void> checkAndUpdateSubscription() async {}
+  /// 스토어를 조회한 결과로 구독 권리를 통째로 맞춘다(만료일 null = 구독 없음).
+  /// 여러 구매를 먼저 하나의 권리로 합친 값이 들어오므로 덮어써도 순서에 안 흔들린다.
+  Future<void> applyStoreEntitlement({
+    required bool hasLifetime,
+    required DateTime? subscriptionExpiry,
+    bool subscriptionOpenEnded = false,
+  }) async {
+    if (state.hasLifetime == hasLifetime &&
+        state.subscriptionExpiryDate == subscriptionExpiry &&
+        state.subscriptionOpenEnded == subscriptionOpenEnded) {
+      return;
+    }
+    await changeSettings(state.copyWith(
+      hasLifetime: hasLifetime,
+      subscriptionExpiryDate: subscriptionExpiry,
+      subscriptionOpenEnded: subscriptionOpenEnded,
+    ));
+  }
 }
-
-// Future<void> checkAndUpdateSubscription() async {
-//   try {
-//     final purchases = await InAppPurchase.instance.();
-//     final validSubscription = purchases.pastPurchases.firstWhereOrNull((purchase) =>
-//         AppConfig.productIds.values.contains(purchase.productID) && purchase.status == PurchaseStatus.purchased);
-
-//     if (validSubscription != null) {
-//       // 유효한 구독이 있는 경우
-//       final purchaseDate = DateTime.fromMillisecondsSinceEpoch(int.parse(validSubscription.transactionDate!));
-//       final newExpiryDate = purchaseDate.add(const Duration(days: 31));
-
-//       if (newExpiryDate.isAfter(DateTime.now())) {
-//         // 새로운 만료 날짜가 현재보다 미래인 경우에만 업데이트
-//         await changeSettings(state.copyWith(subscriptionExpiryDate: newExpiryDate));
-//         logger.i('구독이 갱신되었습니다. 새 만료 날짜: $newExpiryDate');
-//       } else {
-//         // 구독이 이미 만료된 경우
-//         await changeSettings(state.copyWith(subscriptionExpiryDate: null));
-//         logger.i('구독이 만료되었습니다.');
-//       }
-//     } else {
-//       // 유효한 구독이 없는 경우
-//       await changeSettings(state.copyWith(subscriptionExpiryDate: null));
-//       logger.i('활성 구독을 찾을 수 없습니다.');
-//     }
-//   } catch (e) {
-//     logger.e('구독 상태 확인 중 오류 발생: $e');
-//   }
-// }
-// }
 
 /// 전역 설정 프로바이더
 ///
