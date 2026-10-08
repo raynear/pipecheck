@@ -1073,11 +1073,13 @@ class SubscriptionStatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final expiry = settings.subscriptionExpiryDate;
+    // 만료일이 이미 지났으면(3일 유예 중) 'Active until <지난 날짜>'가 거짓이므로 날짜 없이 Active만 보인다.
+    final lapsed = expiry != null && !expiry.isAfter(DateTime.now());
     return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       SText('Subscription Status'),
       if (settings.hasLifetime)
         SText('Lifetime')
-      else if (settings.subscriptionOpenEnded || expiry == null)
+      else if (settings.subscriptionOpenEnded || expiry == null || lapsed)
         SText('Active')
       else
         SText('Active until {}', args: [DateFormat('yyyy-MM-dd').format(expiry)]),

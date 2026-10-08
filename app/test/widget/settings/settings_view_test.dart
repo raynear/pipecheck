@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 // ignore: depend_on_referenced_packages
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:go_router/go_router.dart';
@@ -325,13 +326,15 @@ void main() {
       expect(find.textContaining('2099-11-08'), findsOneWidget);
     });
 
+    testWidgets('3일 유예 중(만료일이 이미 지남)에는 지난 날짜를 보이지 않고 Active만 보인다', (tester) async {
+      final past = DateTime.now().subtract(const Duration(days: 1));
+      await _pump(tester, initial: Settings.initial().copyWith(subscriptionExpiryDate: past));
+      expect(_t('Active'), findsOneWidget);
+      expect(_t('Active until {}'), findsNothing);
+      expect(find.textContaining(DateFormat('yyyy-MM-dd').format(past)), findsNothing);
+    });
+
     testWidgets('Subscribe와 프리미엄 전용 버튼은 구독 시트를 연다', (tester) async {
-      // 구독 시트 자체의 레이아웃 오버플로(테스트 폰트가 넓다)는 이 테스트의 관심사가 아니다.
-      final old = FlutterError.onError;
-      FlutterError.onError = (d) {
-        if (!d.toString().contains('overflowed')) old!(d);
-      };
-      addTearDown(() => FlutterError.onError = old);
       await _pump(tester, size: const Size(900, 1800));
       await _tap(tester, _t('Subscribe'));
       expect(find.byType(DraggableScrollableSheet), findsOneWidget);

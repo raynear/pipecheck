@@ -15,21 +15,19 @@ import '../../support/orange_harness.dart';
 ProductDetails _p(String id, String price, double raw) =>
     ProductDetails(id: id, title: id, description: '', price: price, rawPrice: raw, currencyCode: 'USD');
 
-Future<void> _pump(WidgetTester tester) async {
-  // 구매 버튼은 고정 높이 AdaptiveButton 안에 두 줄 child를 넣어 테스트 글꼴에서 넘친다(템플릿 UI,
-  // 이 테스트의 관심사가 아님) — 그 레이아웃 오류만 거르고 나머지 오류는 그대로 실패시킨다.
-  final original = FlutterError.onError;
-  FlutterError.onError = (d) {
-    if (d.exceptionAsString().contains('RenderFlex overflowed')) return;
-    original?.call(d);
-  };
-  addTearDown(() => FlutterError.onError = original);
+Future<void> _pump(WidgetTester tester, {double textScale = 1}) async {
   tester.view.physicalSize = const Size(900, 3000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(ProviderScope(
     overrides: [inAppPurchaseServiceProvider.overrideWithValue(null)],
-    child: const MaterialApp(home: Scaffold(body: SubscriptionView())),
+    child: MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
+      home: const Scaffold(body: SubscriptionView()),
+    ),
   ));
   await tester.pump();
 }
@@ -78,4 +76,14 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(SubscriptionView), findsOneWidget);
   });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('구매 버튼은 글자 배율 $scale에서도 넘치지 않는다', (tester) async {
+      await _pump(tester, textScale: scale);
+      expect(tester.takeException(), isNull);
+      final button = tester.getRect(find.byType(AdaptiveButton).last);
+      final label = tester.getRect(find.text('Join membership'));
+      expect(button.contains(label.topLeft) && button.contains(label.bottomRight), isTrue);
+    });
+  }
 }

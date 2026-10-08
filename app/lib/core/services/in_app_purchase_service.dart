@@ -75,9 +75,10 @@ class StoreEntitlement {
 /// [storedExpiry]는 지금 저장된 구독 만료일이다. iOS의 Transaction.all은 로컬 캐시라
 /// 오프라인이면 옛 거래만 돌려줄 수 있으므로, 저장된 권리를 덮는 회수 증거가 없는 동안은
 /// 더 짧은 만료일로 내리지 않고 저장 만료일 뒤 [subscriptionGracePeriod]까지 활성으로 둔다.
-/// 회수 증거 = 회수된 평생권, 또는 저장 만료일을 만든 거래 자체의 회수(회수된 구독 거래의
-/// 만료일 == 저장 만료일). 다른 구독 계보의 옛 환불(예: 만료일이 더 먼 환불된 연간)은
-/// 지금 저장된 권리를 덮지 않으므로 증거가 아니다. 업그레이드로 대체된 거래도 증거가 아니다.
+/// 회수 증거 = 저장 구독 기간을 덮는 회수: 만료일이 저장 만료일보다 이르지 않거나 만료일을
+/// 모르는(fail-closed) 회수된 monthly/yearly 거래. 이력 어딘가의 옛 환불은 증거가 아니고,
+/// 회수된 평생권도 아니다(평생권은 살아 있는 항목에서만 계산되어 구독 보존에 증거가 필요 없다).
+/// 업그레이드로 대체된 거래도 증거가 아니다.
 PremiumEntitlement derivePremiumEntitlement(
   Iterable<StoreEntitlement> items, {
   required Map<String, String> productIds,
@@ -93,8 +94,7 @@ PremiumEntitlement derivePremiumEntitlement(
     if (e.superseded) continue;
     if (e.revoked) {
       final until = e.expiresAt;
-      if (e.productId == productIds['lifetime'] ||
-          (isSub && storedExpiry != null && until != null && until.isAtSameMomentAs(storedExpiry))) {
+      if (isSub && storedExpiry != null && (until == null || !until.isBefore(storedExpiry))) {
         revokedCoversStored = true;
       }
       continue;

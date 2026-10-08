@@ -117,25 +117,31 @@ void main() {
       expect(again([_e('m', exp: renewed)], _now.add(d(5))).subscriptionExpiry, renewed);
     });
 
-    test('저장 만료일을 만든 거래 자체의 회수(만료일 일치)는 증거다 — 유예·바닥값 없음', () {
+    test('저장 기간을 덮는 회수(만료일이 저장 만료일 이상)는 증거다 — 유예·바닥값 없음', () {
       final stored = _now.add(d(5));
-      final r = again([_e('m', exp: stored, revoked: true)], stored);
-      expect(r.isActiveAt(_now), isFalse);
-      expect(r.subscriptionExpiry, isNull);
-      // 1초만 달라도 같은 거래가 아니다
-      for (final exp in [stored.subtract(const Duration(seconds: 1)), stored.add(const Duration(seconds: 1))]) {
-        expect(again([_e('m', exp: exp, revoked: true)], stored).isActiveAt(_now), isTrue, reason: '$exp');
+      for (final exp in [stored, stored.add(const Duration(seconds: 1)), stored.add(d(200))]) {
+        final r = again([_e('m', exp: exp, revoked: true)], stored);
+        expect(r.isActiveAt(_now), isFalse, reason: '$exp');
+        expect(r.subscriptionExpiry, isNull, reason: '$exp');
       }
     });
 
-    test('다른 계보의 옛 환불(만료일이 더 먼 환불된 연간)은 증거가 아니다 — 오프라인 캐시가 옛 거래만 줘도 활성', () {
+    test('저장 만료일보다 이른 옛 환불(다른 계보)은 증거가 아니다 — 오프라인 캐시가 옛 거래만 줘도 활성', () {
       final stored = _now.add(d(10));
-      final r = again([
-        _e('y', exp: _now.add(d(200)), revoked: true),
-        _e('m', exp: _now.subtract(d(20))),
-      ], stored);
-      expect(r.subscriptionExpiry, stored);
-      expect(r.isActiveAt(_now), isTrue);
+      for (final exp in [stored.subtract(const Duration(seconds: 1)), _now.subtract(d(200))]) {
+        final r = again([
+          _e('y', exp: exp, revoked: true),
+          _e('m', exp: _now.subtract(d(20))),
+        ], stored);
+        expect(r.subscriptionExpiry, stored, reason: '$exp');
+        expect(r.isActiveAt(_now), isTrue, reason: '$exp');
+      }
+    });
+
+    test('만료일을 모르는 회수된 월간·연간은 증거다(fail-closed)', () {
+      final stored = _now.add(d(5));
+      expect(again([_e('m', revoked: true)], stored).isActiveAt(_now), isFalse);
+      expect(again([_e('y', revoked: true)], stored).isActiveAt(_now), isFalse);
     });
 
     test('업그레이드로 대체된 옛 월간(만료일 = 저장값)만 보이는 오프라인 캐시는 저장값을 지킨다', () {
@@ -147,8 +153,12 @@ void main() {
       expect(_derive([_e('m', exp: stored, superseded: true)]).isActiveAt(_now), isFalse);
     });
 
-    test('회수된 평생권은 증거다', () {
-      expect(again([_e('l', revoked: true)], _now.add(d(5))).isActiveAt(_now), isFalse);
+    test('회귀: 옛 환불 평생권 + 저장 월간 만료일(미래) + 오프라인 캐시가 옛 거래만 줌 → 구독 활성 유지', () {
+      final stored = _now.add(d(5));
+      final r = again([_e('l', revoked: true)], stored);
+      expect(r.hasLifetime, isFalse);
+      expect(r.subscriptionExpiry, stored);
+      expect(r.isActiveAt(_now), isTrue);
     });
 
     test('증거가 있어도 살아 있는 다른 거래의 만료일은 유지된다', () {
