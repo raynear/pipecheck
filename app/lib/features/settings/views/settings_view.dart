@@ -60,13 +60,17 @@ class _SettingsState extends ConsumerState<SettingsView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final settings = ref.watch(settingsProvider);
+      if (!mounted) return;
+      // 콜백 안에서는 watch가 아니라 read (watch는 build에서만 구독된다).
+      final settings = ref.read(settingsProvider);
       setState(() {
         useNotification = settings.useNotification;
         useReminder = settings.useReminder;
       });
       PackageInfo packageInfo = await PackageInfo.fromPlatform();
 
+      // await 사이에 화면이 닫혔으면 setState·ref 모두 쓰면 안 된다.
+      if (!mounted) return;
       setState(() {
         _packageInfo = packageInfo;
       });
@@ -913,11 +917,9 @@ class _SettingsState extends ConsumerState<SettingsView> {
   /// 로컬 데이터를 JSON 파일로 내보내 공유 시트로 전달 (GDPR 이동권, P2-23f).
   Future<void> _exportData(BuildContext context) async {
     try {
-      final path = await ref.read(dataExportServiceProvider).exportToFile();
-      if (!context.mounted) return;
-      await ref.read(shareServiceProvider).shareFile(
-            path,
-            subject: 'Data Export'.tr(),
+      final share = ref.read(shareServiceProvider);
+      await ref.read(dataExportServiceProvider).exportAndShare(
+            (path) => share.shareFile(path, subject: 'Data Export'.tr()),
           );
     } catch (e) {
       if (!context.mounted) return;
@@ -928,11 +930,9 @@ class _SettingsState extends ConsumerState<SettingsView> {
   /// 로컬 데이터를 JSON 파일로 백업해 공유 시트로 전달 (P2-24).
   Future<void> _backupData(BuildContext context) async {
     try {
-      final path = await ref.read(dataExportServiceProvider).exportToFile();
-      if (!context.mounted) return;
-      await ref.read(shareServiceProvider).shareFile(
-            path,
-            subject: 'backup.backupSubject'.tr(),
+      final share = ref.read(shareServiceProvider);
+      await ref.read(dataExportServiceProvider).exportAndShare(
+            (path) => share.shareFile(path, subject: 'backup.backupSubject'.tr()),
           );
     } catch (e) {
       if (!context.mounted) return;

@@ -242,18 +242,31 @@ class AppConfig {
     }
   }
 
+  static final Completer<void> _consentApplied = Completer<void>();
+
+  /// 부팅 동의 적용이 끝나는 시점. `app_start` 같은 이벤트는 이후에 보낸다 —
+  /// 네이티브 수집 기본이 OFF라 그 전에 보내면 유실된다.
+  static Future<void> get consentApplied => _consentApplied.future;
+
+  /// 부팅 동의 단계 — 저장된 동의를 SDK에 적용한다(미동의면 전부 거부, 동의 기능이
+  /// 꺼진 앱은 전부 허용). `_initializeNonCriticalServices`는 이것만 부른다.
+  @visibleForTesting
+  static Future<void> applyBootConsent({PrivacyConsentService? service}) =>
+      (service ?? PrivacyConsentService()).applyStoredConsent();
+
   Future<void> _initializeNonCriticalServices() async {
     try {
-      // Firebase Analytics 설정 — 플래그·초기화 가드는 FirebaseService가 한다
-      // (firebase_services 패키지). 비활성화 시 각 호출은 안전하게 no-op.
+      // 저장된 동의(분석·ad_storage·Crashlytics)를 가장 먼저 적용한다. 미동의면 전부 거부.
+      // 하드코딩 true로 덮어쓰지 않는다 — 거부한 사용자도 다음 실행에서 수집됐다.
+      try {
+        await applyBootConsent();
+      } finally {
+        if (!_consentApplied.isCompleted) _consentApplied.complete();
+      }
+
       if (kDebugMode) {
         // 디버그 모드 설정
-        await FirebaseService.setAnalyticsCollectionEnabled(true);
         await FirebaseService.setSessionTimeoutDuration(const Duration(seconds: 30)); // 디버그용 짧은 세션 타임아웃
-        await FirebaseService.setConsent(
-          analyticsStorageConsentGranted: true,
-          adStorageConsentGranted: true,
-        );
         await FirebaseService.setUserProperty(name: 'debug_mode', value: 'true'); // 디버그 사용자 프로퍼티
 
         // 디버그 이벤트에 추가 파라미터 포함
@@ -263,19 +276,11 @@ class AppConfig {
         );
       } else {
         // 프로덕션 모드 설정
-        await FirebaseService.setAnalyticsCollectionEnabled(true);
         await FirebaseService.setSessionTimeoutDuration(const Duration(minutes: 30)); // 프로덕션용 긴 세션 타임아웃
-        await FirebaseService.setConsent(
-          analyticsStorageConsentGranted: true,
-          adStorageConsentGranted: true,
-        );
       }
 
-      // Firebase Crashlytics 설정 — 플래그·초기화 가드는 CrashReporter가 한다.
-      // FlutterError.onError는 여기서 할당하지 않는다 — main()의
-      // ErrorHandler.setupGlobalErrorHandling()이 단일 소유자 (P1-14b).
-      // 여기서 다시 할당하면 전역 핸들러를 덮어쓴다.
-      await CrashReporter.setCollectionEnabled(true);
+      // Firebase Crashlytics — FlutterError.onError는 여기서 할당하지 않는다(main()의
+      // ErrorHandler가 단일 소유자, P1-14b). 수집 on/off는 위 applyBootConsent가 정한다.
       await _setCrashClassificationKeys();
 
       // 광고 서비스 초기화 (광고가 활성화된 경우에만).
@@ -396,9 +401,23 @@ class AppConfig {
 
   // 앱 실행 횟수 증가 및 리뷰 확인 (P1-14b: AppReviewService 통합 —
   // 세션 추적 + 재요청 간격 제한, 플래그로 제어 가능)
-  Future<void> incrementAppLaunchCountAndCheckForReview() async {
-    final settingsNotifier = ProviderContainer().read(settingsProvider.notifier);
-    await settingsNotifier.incrementAppLaunchCount();
+  ///
+  /// [settingsNotifier]: 앱 메인 컨테이너의 notifier. 주면 메인 상태에 증가분이 반영된다.
+  /// 생략하면 임시 컨테이너를 만들어 쓰고 dispose한다(호환용 — 메인 상태와 갈라지므로
+  /// 호출부가 주입하는 것이 맞다).
+  Future<void> incrementAppLaunchCountAndCheckForReview({
+    SettingsNotifier? settingsNotifier,
+  }) async {
+    if (settingsNotifier != null) {
+      await settingsNotifier.incrementAppLaunchCount();
+    } else {
+      final container = ProviderContainer();
+      try {
+        await container.read(settingsProvider.notifier).incrementAppLaunchCount();
+      } finally {
+        container.dispose();
+      }
+    }
 
     if (!AppFeatureConfig.isAppReviewPromptEnabled) return;
 

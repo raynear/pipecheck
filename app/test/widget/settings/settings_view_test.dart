@@ -103,6 +103,10 @@ class _Export extends Fake implements DataExportService {
     if (fail) throw StateError('disk full');
     return '/tmp/export.json';
   }
+
+  @override
+  Future<void> exportAndShare(Future<void> Function(String path) share) async =>
+      share(await exportToFile());
 }
 
 class _Restore extends Fake implements RestoreService {

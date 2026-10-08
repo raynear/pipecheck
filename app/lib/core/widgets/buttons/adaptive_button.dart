@@ -82,16 +82,27 @@ class _AdaptiveButtonState extends State<AdaptiveButton> with SingleTickerProvid
     final design = context.design;
     final isBoldMinimalism = design.name.contains('Bold');
 
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      onTap: widget.isLoading || widget.onPressed == null ? null : widget.onPressed,
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) => Transform.scale(
-          scale: _scaleAnimation.value,
-          child: _buildButton(context, isBoldMinimalism),
+    final enabled = widget.onPressed != null && !widget.isLoading;
+
+    // 스크린리더에 "버튼"과 활성/비활성을 알린다. 글자는 자식 Text가 라벨로 합쳐진다.
+    // 비활성이면 제스처 핸들러를 모두 뗀다 — onTapDown만 남아 있어도 GestureDetector가
+    // 시맨틱 "탭" 동작을 노출해, 비활성 버튼이 두 번 탭하면 눌리는 것처럼 읽힌다.
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        child: GestureDetector(
+          onTapDown: enabled ? _handleTapDown : null,
+          onTapUp: enabled ? _handleTapUp : null,
+          onTapCancel: enabled ? _handleTapCancel : null,
+          onTap: enabled ? widget.onPressed : null,
+          child: AnimatedBuilder(
+            animation: _scaleAnimation,
+            builder: (context, child) => Transform.scale(
+              scale: _scaleAnimation.value,
+              child: _buildButton(context, isBoldMinimalism),
+            ),
+          ),
         ),
       ),
     );
@@ -155,6 +166,8 @@ class _AdaptiveButtonState extends State<AdaptiveButton> with SingleTickerProvid
         width: 20,
         height: 20,
         child: CircularProgressIndicator(
+          // 로딩 중엔 라벨 글자가 사라진다 — 스크린리더가 "이름 없는 비활성 버튼"으로 읽지 않게 이름을 남긴다.
+          semanticsLabel: widget.label.isEmpty ? null : widget.label,
           strokeWidth: 2,
           valueColor: AlwaysStoppedAnimation<Color>(colors.foregroundColor),
         ),

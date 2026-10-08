@@ -3,6 +3,8 @@ import 'package:pipecheck/core/services/snackbar_service.dart';
 import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:pipecheck/core/widgets/inputs/pin_entry.dart';
 import 'package:pipecheck/core/widgets/navigation/adaptive_app_bar.dart';
+import 'package:pipecheck/features/auth/view_models/auth_view_model.dart'
+    show emailAuthServiceProvider;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,12 +64,19 @@ class _PinSetupViewState extends ConsumerState<PinSetupView> {
           case PinVerifyOutcome.success:
             _goTo(_PinStep.enterNew);
           case PinVerifyOutcome.wrong:
-            _fail(result.attemptsRemaining <= 2
-                ? 'auth.pin.attemptsLeft'.tr(args: ['${result.attemptsRemaining}'])
-                : 'auth.pin.incorrect'.tr());
+            _fail(
+              result.attemptsRemaining <= 2
+                  ? 'auth.pin.attemptsLeft'.tr(
+                      args: ['${result.attemptsRemaining}'],
+                    )
+                  : 'auth.pin.incorrect'.tr(),
+            );
           case PinVerifyOutcome.lockedOut:
-            _fail('auth.pin.lockedFor'
-                .tr(args: [_formatRemaining(result.lockRemaining ?? Duration.zero)]));
+            _fail(
+              'auth.pin.lockedFor'.tr(
+                args: [_formatRemaining(result.lockRemaining ?? Duration.zero)],
+              ),
+            );
           case PinVerifyOutcome.noPin:
             _goTo(_PinStep.enterNew); // 경합으로 PIN이 사라진 경우 설정으로 폴백
         }
@@ -79,10 +88,14 @@ class _PinSetupViewState extends ConsumerState<PinSetupView> {
       case _PinStep.confirmNew:
         if (pin == _newPin) {
           _busy = true;
-          await ref.read(pinServiceProvider).setPin(pin);
+          await ref
+              .read(pinServiceProvider)
+              .setPin(pin, boundUid: _signedInUid());
           if (!mounted) return;
           _busy = false;
-          ref.read(snackBarServiceProvider).showSuccess(
+          ref
+              .read(snackBarServiceProvider)
+              .showSuccess(
                 _isChange ? 'auth.pin.changeSuccess' : 'auth.pin.setSuccess',
               );
           if (context.canPop()) context.pop(true);
@@ -92,6 +105,13 @@ class _PinSetupViewState extends ConsumerState<PinSetupView> {
           _fail('auth.pin.mismatch'.tr());
         }
     }
+  }
+
+  /// PIN을 만드는 지금 로그인돼 있는 계정 — 이메일 복구의 소유자 기준.
+  /// Firebase가 없거나 로그아웃 상태면 null(바인딩 없음 → 이메일 복구 숨김).
+  String? _signedInUid() {
+    final email = ref.read(emailAuthServiceProvider);
+    return email.isFirebaseReady ? email.currentUser?.uid : null;
   }
 
   void _goTo(_PinStep step) {
@@ -129,7 +149,9 @@ class _PinSetupViewState extends ConsumerState<PinSetupView> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AdaptiveAppBar(
-        title: SText(_isChange ? 'auth.pin.changeTitle' : 'auth.pin.setupTitle'),
+        title: SText(
+          _isChange ? 'auth.pin.changeTitle' : 'auth.pin.setupTitle',
+        ),
       ),
       body: SafeArea(
         child: Center(
@@ -139,7 +161,10 @@ class _PinSetupViewState extends ConsumerState<PinSetupView> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       child: Text(
                         _instructionKey.tr(),
                         style: textTheme.titleMedium,

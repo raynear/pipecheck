@@ -11,6 +11,7 @@ import 'package:pipecheck/features/settings/index.dart';
 import 'package:pipecheck/features/settings/views/feature_config_view.dart';
 import 'package:pipecheck/features/splash/index.dart';
 import 'package:pipecheck/features/subscription/index.dart';
+import 'package:pipecheck/core/services/deep_link_service.dart';
 import 'package:firebase_services/firebase_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,10 +37,41 @@ CupertinoExtendedPage<void> _logAndBuildPage({
   // 현재 페이지 로깅
   logger.d('화면 전환: $screenName');
 
-  // Firebase Analytics를 사용하여 페이지 조회 이벤트 로깅
-  FirebaseService.logScreenView(screenName: screenName);
-
+  // screen_view는 여기서 보내지 않는다 — GoRouter는 탐색·refresh마다 스택의 모든
+  // 매치에 pageBuilder를 다시 불러서 여기서 보내면 중복 집계된다(Splash는 항상 2회).
+  // 위치가 바뀔 때 한 번만 보내는 [attachScreenViewLogging]이 맡는다.
   return CupertinoExtendedPage(child: child);
+}
+
+/// screen_view 로거 시그니처 (테스트에서 대체).
+typedef ScreenViewLog = void Function(String screenName);
+
+void _logScreenViewToFirebase(String screenName) =>
+    FirebaseService.logScreenView(screenName: screenName);
+
+/// 라우터 위치가 **바뀔 때만** screen_view를 한 번 보낸다. 반환값은 해제 함수.
+///
+/// `FirebaseAnalyticsObserver`로 일원화하지 않은 이유: 옵저버는 네비게이터마다
+/// 인스턴스가 따로 필요한데(NavigatorObserver는 한 네비게이터에만 붙는다)
+/// `FirebaseService.navigatorObserver`는 단일 인스턴스라 ShellRoute 안의
+/// 홈·설정을 못 본다. 라우터 위치 변화를 한 곳에서 듣는 쪽이 루트·셸을 함께 덮는다.
+VoidCallback attachScreenViewLogging(
+  GoRouter router, {
+  ScreenViewLog log = _logScreenViewToFirebase,
+}) {
+  String? lastPath;
+  void onChange() {
+    final config = router.routerDelegate.currentConfiguration;
+    if (config.isEmpty) return;
+    final path = config.uri.path;
+    if (path == lastPath) return;
+    lastPath = path;
+    final route = config.last.route;
+    log(route.name ?? config.fullPath);
+  }
+
+  router.routerDelegate.addListener(onChange);
+  return () => router.routerDelegate.removeListener(onChange);
 }
 
 /// GoRouter 프로바이더
@@ -59,7 +91,12 @@ CupertinoExtendedPage<void> _logAndBuildPage({
 /// context.push(Routes.settings); // 설정 페이지를 스택에 추가
 /// ```
 final goRouterProvider = Provider<GoRouter>((ref) {
+  final authRefresh = authRefreshNotifier(ref);
+
   final router = GoRouter(
+    // 인증 변화는 redirect를 다시 평가시킨다 — 로그인 성공 시 라우터가 LoginView의
+    // `context.go`보다 먼저 보낼 수 있으므로 로그인 뒤 별도 흐름은 redirect 이후 화면이 소유한다.
+    refreshListenable: authRefresh,
     initialLocation: Routes.splash,
     navigatorKey: _rootNavigatorKey,
     debugLogDiagnostics: true,
@@ -203,14 +240,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = authState.isAuthenticated;
       final currentPath = state.matchedLocation;
 
-      // 인증이 필요한 라우트 목록
-      const protectedRoutes = [
-        Routes.home,
-        Routes.settings,
-        Routes.stats,
-        Routes.badges,
-      ];
-
       // 인증 관련 라우트
       const authRoutes = [
         Routes.auth,
@@ -229,10 +258,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         return Routes.home;
       }
 
-      // 인증이 필요한 라우트 보호
+      // 인증이 필요한 라우트 보호 (공개 목록 밖은 전부)
       if (AppFeatureConfig.isAuthenticationEnabled &&
           !isAuthenticated &&
-          protectedRoutes.contains(currentPath)) {
+          isProtectedRoute(currentPath)) {
+        // 원래 목적지를 잠금 해제 뒤 이어 연다 (딥링크·알림 탭을 버리지 않는다).
+        PendingDeepLink.holdForUnlock(state.uri.toString());
         return Routes.auth;
       }
 
@@ -269,8 +300,48 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 
+  ref.onDispose(attachScreenViewLogging(router));
+  ref.onDispose(router.dispose);
+  ref.onDispose(authRefresh.dispose); // 라우터가 먼저 리스너를 뗀 뒤
+
   return router;
 });
+
+/// 인증 변화(앱잠금 authState, 서버 세션 authViewModel)를 알리는 notifier.
+///
+/// GoRouter의 `refreshListenable`에 물려 라우터를 **재생성하지 않고** redirect만
+/// 다시 평가시킨다 — 로그아웃·잠금·세션 만료 때 보호 화면이 다음 네비게이션까지
+/// 남지 않게 한다. dispose는 호출한 쪽(라우터 provider) 몫이다.
+ValueNotifier<int> authRefreshNotifier(Ref ref) {
+  final notifier = ValueNotifier<int>(0);
+  ref.listen(authStateProvider, (_, _) => notifier.value++);
+  ref.listen(authViewModelProvider, (_, _) => notifier.value++);
+  return notifier;
+}
+
+/// 앱잠금이 걸려 있어도 열리는 공개 라우트 (하위 경로 포함). **여기 없는 경로는
+/// 전부 보호된다** — 차단 목록이면 경로를 추가하고 목록에 넣는 걸 잊는 순간 그 화면이
+/// 잠금 없이 열린다(fail-open).
+///
+/// - splash·auth·login·pinRecovery: 잠금을 푸는 흐름 자체.
+/// - permission·onboarding: 잠금 설정 이전에 거치는 첫 실행 흐름(splash가 보냄).
+///   개인 데이터가 없는 화면이다.
+const _publicRoutes = [
+  Routes.splash,
+  Routes.auth,
+  Routes.login,
+  Routes.pinRecovery,
+  Routes.permission,
+  Routes.onboarding,
+];
+
+/// [path]가 앱잠금 뒤에 있어야 하는 라우트인가 — 공개 라우트(와 그 하위)가 아니면
+/// 전부 true.
+///
+/// 정확 일치만 보면 `/settings/pin` 같은 하위 라우트가 우회한다.
+/// `/authx`가 공개로 오인되지 않게 `<route>/` 접두사만 인정한다.
+bool isProtectedRoute(String path) =>
+    !_publicRoutes.any((r) => path == r || path.startsWith('$r/'));
 
 /// 라우트 경로 상수 클래스
 ///
@@ -315,14 +386,17 @@ const Set<String> deepLinkableRoutes = {
 ///
 /// 커스텀 스킴(`myapp://open/settings`)과 유니버설 링크
 /// (`https://host/settings?x=1`) 모두 `uri.path`가 라우트가 된다(host는 스킴
-/// sentinel 또는 도메인일 뿐). 최상위 세그먼트가 [deepLinkableRoutes]에 있을
+/// sentinel 또는 도메인일 뿐). 전체 경로가 [deepLinkableRoutes]에 있을
 /// 때만 위치를 돌려주고(쿼리 보존), 그 외에는 null(무시 — 가비지 링크로 에러
 /// 페이지를 띄우거나 보호 라우트를 건너뛰지 않는다).
 String? deepLinkLocation(Uri uri) {
-  if (uri.pathSegments.isEmpty) return null;
-  final base = '/${uri.pathSegments.first}';
-  if (!deepLinkableRoutes.contains(base)) return null;
-  return uri.hasQuery ? '${uri.path}?${uri.query}' : uri.path;
+  // 전체 경로가 화이트리스트와 같아야 한다. 첫 세그먼트만 보면
+  // `/settings/pin` 같은 하위 라우트가 보호 판정 없이 열린다.
+  final path = uri.path.length > 1 && uri.path.endsWith('/')
+      ? uri.path.substring(0, uri.path.length - 1)
+      : uri.path;
+  if (!deepLinkableRoutes.contains(path)) return null;
+  return uri.hasQuery ? '$path?${uri.query}' : path;
 }
 
 /// 라우트 이름 상수 클래스

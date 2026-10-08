@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:utils/utils.dart';
 
@@ -49,6 +50,16 @@ class FcmNotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   StreamSubscription<RemoteMessage>? _onMessageSubscription;
   StreamSubscription<RemoteMessage>? _onMessageOpenedAppSubscription;
+  StreamSubscription<String>? _onTokenRefreshSubscription;
+
+  // APNs 토큰 재시도 — 상한 없이 반복하면 APNs가 영영 안 오는 기기(시뮬레이터·푸시 capability 없음)에서
+  // 5초마다 평생 깨어난다. 지수 백오프 + 상한 후 포기하고, 권한 허용 시 requestFCMPermission이 새로 시작한다.
+  static const int _maxApnsRetries = 5;
+  Timer? _apnsRetryTimer;
+  // dispose 중 getAPNSToken을 기다리던 호출이 깨어나 dispose 뒤에 새 재시도 타이머를 걸지 못하게 한다.
+  bool _disposed = false;
+  bool _isIOS = Platform.isIOS;
+  Duration _apnsRetryBaseDelay = const Duration(seconds: 5);
   String? _fcmToken;
 
   bool _isInitialized = false;
@@ -74,6 +85,7 @@ class FcmNotificationService {
 
     try {
       // FirebaseMessaging 인스턴스 초기화
+      _disposed = false;
       _messaging = FirebaseMessaging.instance;
       // 백그라운드 메시지 핸들러 설정
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
@@ -85,7 +97,7 @@ class FcmNotificationService {
       await _getAndSaveFCMToken();
 
       // 토큰 리프레시 리스너
-      _messaging?.onTokenRefresh.listen(_onTokenRefresh);
+      _listenTokenRefresh();
 
       // FCM 메시지 리스너 설정
       _setupFCMMessageListeners();
@@ -104,15 +116,24 @@ class FcmNotificationService {
   }
 
   // FCM 토큰 가져오기 및 저장
-  Future<void> _getAndSaveFCMToken() async {
+  Future<void> _getAndSaveFCMToken([int attempt = 0]) async {
     try {
       // iOS에서는 APNs 토큰이 있어야 FCM 토큰을 받을 수 있음
-      if (Platform.isIOS) {
+      if (_isIOS) {
         final apnsToken = await _messaging?.getAPNSToken();
+        if (_disposed) return;
         if (apnsToken == null) {
-          logger.w('APNs token not available yet');
-          // 나중에 다시 시도
-          Future.delayed(const Duration(seconds: 5), _getAndSaveFCMToken);
+          if (attempt >= _maxApnsRetries) {
+            logger.w('APNs token still unavailable after $attempt retries - giving up');
+            return;
+          }
+          logger.w('APNs token not available yet (retry ${attempt + 1}/$_maxApnsRetries)');
+          // 나중에 다시 시도 (지수 백오프)
+          _apnsRetryTimer?.cancel();
+          _apnsRetryTimer = Timer(
+            apnsRetryDelay(_apnsRetryBaseDelay, attempt),
+            () => _getAndSaveFCMToken(attempt + 1),
+          );
           return;
         }
       }
@@ -129,6 +150,16 @@ class FcmNotificationService {
     } catch (e) {
       logger.e('Failed to get FCM token: $e');
     }
+  }
+
+  /// [attempt]번째(0부터) 재시도 전 대기 시간 — 기준 간격의 2^attempt배.
+  @visibleForTesting
+  static Duration apnsRetryDelay(Duration base, int attempt) => base * (1 << attempt);
+
+  // 토큰 리프레시 구독 — 필드로 잡아야 dispose가 끊고, 재초기화 때 리스너가 쌓이지 않는다.
+  void _listenTokenRefresh() {
+    _onTokenRefreshSubscription?.cancel();
+    _onTokenRefreshSubscription = _messaging?.onTokenRefresh.listen(_onTokenRefresh);
   }
 
   // 토큰 리프레시 처리 (서버측 저장 없음 — 위 [P1-16.5b 확정] 참조)
@@ -324,7 +355,28 @@ class FcmNotificationService {
   }
 
   void dispose() {
+    _disposed = true;
+    _apnsRetryTimer?.cancel();
+    _apnsRetryTimer = null;
+    _onTokenRefreshSubscription?.cancel();
+    _onTokenRefreshSubscription = null;
     _onMessageSubscription?.cancel();
     _onMessageOpenedAppSubscription?.cancel();
   }
+
+  // --- 테스트 시임: Firebase 앱·iOS 기기 없이 재시도·구독 수명을 검증한다 ---
+
+  @visibleForTesting
+  void debugAttach(FirebaseMessaging messaging, {bool? isIOS, Duration? apnsRetryBaseDelay}) {
+    _messaging = messaging;
+    _disposed = false;
+    if (isIOS != null) _isIOS = isIOS;
+    if (apnsRetryBaseDelay != null) _apnsRetryBaseDelay = apnsRetryBaseDelay;
+  }
+
+  @visibleForTesting
+  Future<void> debugFetchToken() => _getAndSaveFCMToken();
+
+  @visibleForTesting
+  void debugListenTokenRefresh() => _listenTokenRefresh();
 }

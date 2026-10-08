@@ -78,7 +78,26 @@ class _AdaptiveTextFieldState extends State<AdaptiveTextField> {
   }
 
   @override
+  void didUpdateWidget(AdaptiveTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 부모가 노드/controller를 바꾸면 옛 것의 리스너를 떼고(내가 만든 것이면 폐기) 새 것으로 옮겨 간다.
+    if (oldWidget.focusNode != widget.focusNode) {
+      _focusNode.removeListener(_onFocusChange);
+      if (oldWidget.focusNode == null) _focusNode.dispose();
+      _focusNode = widget.focusNode ?? FocusNode();
+      _focusNode.addListener(_onFocusChange);
+      _isFocused = _focusNode.hasFocus;
+    }
+    if (oldWidget.controller != widget.controller) {
+      if (oldWidget.controller == null) _controller.dispose();
+      _controller = widget.controller ?? TextEditingController();
+    }
+  }
+
+  @override
   void dispose() {
+    // 외부에서 받은 노드는 수명이 부모 것이다 — 내 리스너만 떼고 폐기는 부모에게 맡긴다.
+    _focusNode.removeListener(_onFocusChange);
     if (widget.focusNode == null) {
       _focusNode.dispose();
     }
@@ -117,8 +136,8 @@ class _AdaptiveTextFieldState extends State<AdaptiveTextField> {
                 color: _hasError
                     ? colors.error
                     : _isFocused
-                        ? colors.primary
-                        : colors.textSecondary,
+                    ? colors.primary
+                    : colors.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -160,24 +179,13 @@ class _AdaptiveTextFieldState extends State<AdaptiveTextField> {
 
     switch (widget.variant) {
       case TextFieldVariant.outlined:
-        return _buildOutlinedTextField(
-          context,
-          isBoldMinimalism,
-          borderRadius,
-        );
+        return _buildOutlinedTextField(context, isBoldMinimalism, borderRadius);
 
       case TextFieldVariant.filled:
-        return _buildFilledTextField(
-          context,
-          isBoldMinimalism,
-          borderRadius,
-        );
+        return _buildFilledTextField(context, isBoldMinimalism, borderRadius);
 
       case TextFieldVariant.underlined:
-        return _buildUnderlinedTextField(
-          context,
-          isBoldMinimalism,
-        );
+        return _buildUnderlinedTextField(context, isBoldMinimalism);
     }
   }
 
@@ -196,8 +204,8 @@ class _AdaptiveTextFieldState extends State<AdaptiveTextField> {
           color: _hasError
               ? colors.error
               : _isFocused
-                  ? colors.primary
-                  : colors.inputBorder,
+              ? colors.primary
+              : colors.inputBorder,
           width: isBoldMinimalism ? 2 : (_isFocused ? 2 : 1),
         ),
       ),
@@ -240,8 +248,8 @@ class _AdaptiveTextFieldState extends State<AdaptiveTextField> {
             color: _hasError
                 ? colors.error
                 : _isFocused
-                    ? colors.primary
-                    : colors.inputBorder,
+                ? colors.primary
+                : colors.inputBorder,
             width: isBoldMinimalism ? 2 : (_isFocused ? 2 : 1),
           ),
         ),
@@ -279,16 +287,16 @@ class _AdaptiveTextFieldState extends State<AdaptiveTextField> {
       decoration: InputDecoration(
         isDense: true,
         hintText: widget.hint,
-        hintStyle: typography.bodyMedium.copyWith(
-          color: colors.textTertiary,
-        ),
-        labelText: widget.variant == TextFieldVariant.filled ? widget.label : null,
+        hintStyle: typography.bodyMedium.copyWith(color: colors.textTertiary),
+        labelText: widget.variant == TextFieldVariant.filled
+            ? widget.label
+            : null,
         labelStyle: typography.bodyMedium.copyWith(
           color: _hasError
               ? colors.error
               : _isFocused
-                  ? colors.primary
-                  : colors.textTertiary,
+              ? colors.primary
+              : colors.textTertiary,
         ),
         floatingLabelStyle: typography.labelSmall.copyWith(
           color: _hasError ? colors.error : colors.primary,
@@ -345,7 +353,21 @@ class _AdaptiveSearchFieldState extends State<AdaptiveSearchField> {
   }
 
   @override
+  void didUpdateWidget(AdaptiveSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _controller.removeListener(_onTextChanged);
+      if (oldWidget.controller == null) _controller.dispose();
+      _controller = widget.controller ?? TextEditingController();
+      _controller.addListener(_onTextChanged);
+      _hasText = _controller.text.isNotEmpty;
+    }
+  }
+
+  @override
   void dispose() {
+    // 외부 controller는 부모 것이다 — 내 리스너만 떼고 폐기는 부모에게 맡긴다.
+    _controller.removeListener(_onTextChanged);
     if (widget.controller == null) {
       _controller.dispose();
     }
@@ -382,10 +404,7 @@ class _AdaptiveSearchFieldState extends State<AdaptiveSearchField> {
           isBoldMinimalism ? 0 : spacing.radiusFull,
         ),
         border: isBoldMinimalism
-            ? Border.all(
-                color: colors.border,
-                width: 2,
-              )
+            ? Border.all(color: colors.border, width: 2)
             : null,
       ),
       child: Row(

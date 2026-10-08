@@ -85,6 +85,28 @@ class FirebaseEmailAuthService {
     }
   }
 
+  /// 지금 로그인된 계정을 비밀번호로 다시 확인한다 (세션을 바꾸지 않는다).
+  ///
+  /// `signIn`은 기기의 기존 세션을 다른 계정으로 덮는다 — 소유자 확인만 필요한
+  /// 곳(PIN 이메일 복구)은 이걸 쓴다. 로그인된 사용자가 없으면 `no-current-user`.
+  Future<AuthUser> reauthenticate({
+    required String email,
+    required String password,
+  }) async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw const AuthException('no-current-user', 'no server account');
+    }
+    try {
+      await user.reauthenticateWithCredential(
+        fb.EmailAuthProvider.credential(email: email, password: password),
+      );
+      return _map(user);
+    } on fb.FirebaseAuthException catch (e) {
+      throw AuthException(e.code, e.message);
+    }
+  }
+
   /// 이메일/비밀번호 회원가입. 가입 후 표시 이름 설정(선택) + 인증 메일 발송
   /// (best-effort)을 수행하고 가입 사용자와 발송 여부를 반환한다.
   Future<EmailSignUpResult> signUp({

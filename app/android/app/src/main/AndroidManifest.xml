@@ -27,6 +27,15 @@
             </intent-filter>
         </activity>
 
+        <!-- 개인정보 동의 전 수집 차단: 네이티브 기본 수집 OFF. 부팅 시 AppConfig.applyBootConsent가
+             저장된 동의(동의 기능이 꺼진 앱은 전부 허용)로 켠다. -->
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_analytics_storage" android:value="false" />
+
         <!-- Google Mobile Ads -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"

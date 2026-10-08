@@ -5,13 +5,18 @@ import 'package:utils/utils.dart';
 
 /// Drift 기반 데이터베이스 구현체
 class DriftDatabase extends DatabaseDataSource {
-  final AppDatabase _db = AppDatabase();
+  final AppDatabase _db;
   bool _isInitialized = false;
 
   // 테이블 레지스트리: 문자열 이름 → TableInfo 객체 매핑
   late final Map<String, TableInfo> _tableRegistry;
 
-  DriftDatabase() {
+  /// [db]를 주면 그 인스턴스를, 안 주면 프로덕션 싱글톤을 쓴다.
+  /// 테스트는 `DriftDatabase(AppDatabase.forTesting(NativeDatabase.memory()))`.
+  ///
+  /// 주의: [dispose]는 `_db.close()`를 부른다. 인자 없이 만든 인스턴스를
+  /// dispose하면 앱 전역 DB가 닫힌다 — 테스트에서는 주입 경로만 dispose할 것.
+  DriftDatabase([AppDatabase? db]) : _db = db ?? AppDatabase() {
     logger.d('DriftDatabase constructor called');
     // 테이블 레지스트리 초기화
     // Note: 고아 테이블들(calendar_accounts, calendar_preferences, categorys, tasks, blocks, sync_queues, holidays, todo_list_mappings)은

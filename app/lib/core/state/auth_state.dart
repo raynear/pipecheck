@@ -55,28 +55,22 @@ abstract class AuthState with _$AuthState {
   const AuthState._();
 
   /// 인증되지 않은 초기 상태
-  factory AuthState.initial() => const AuthState(
-        isAuthenticated: false,
-        method: AuthMethod.none,
-      );
+  factory AuthState.initial() =>
+      const AuthState(isAuthenticated: false, method: AuthMethod.none);
 
   /// 인증 완료 상태 생성
-  factory AuthState.authenticated({
-    required AuthMethod method,
-  }) =>
-      AuthState(
-        isAuthenticated: true,
-        method: method,
-        lastAuthTime: DateTime.now(),
-      );
-
-  /// 세션이 유효한지 확인 (24시간 이내 인증)
-  bool get isSessionValid {
-    if (!isAuthenticated || lastAuthTime == null) return false;
-    final elapsed = DateTime.now().difference(lastAuthTime!);
-    return elapsed.inHours < 24;
-  }
+  factory AuthState.authenticated({required AuthMethod method}) => AuthState(
+    isAuthenticated: true,
+    method: method,
+    lastAuthTime: DateTime.now(),
+  );
 }
+
+/// 백그라운드에서 돌아왔을 때 앱을 다시 잠그기까지의 유예 시간.
+///
+/// 생체 인증 프롬프트·권한 팝업처럼 앱이 잠깐 비활성화되는 정상 흐름에서
+/// 사용자를 쫓아내지 않으면서, 폰을 내려놨다 다시 든 경우는 잠근다.
+const Duration kRelockGrace = Duration(seconds: 30);
 
 /// 통합 인증 서비스 Notifier
 ///
@@ -86,6 +80,10 @@ abstract class AuthState with _$AuthState {
 /// - 서버 이메일 인증은 AuthViewModel(features/auth)이 소유 —
 ///   여기 중복 구현하지 말 것 (16.5a에서 이중 구현 1벌 삭제됨)
 class AuthStateNotifier extends Notifier<AuthState> {
+  /// 백그라운드로 간 시각. **`build`에서 `ref.watch`를 쓰지 말 것** — Notifier가
+  /// 재생성되면 이 필드가 사라져 재잠금이 fail-open(영영 안 잠김)이 된다.
+  DateTime? _backgroundedAt;
+
   @override
   AuthState build() {
     // 잠글 것이 없으면(플래그 OFF 또는 앱 잠금 미설정 none) 처음부터 인증 상태.
@@ -99,6 +97,39 @@ class AuthStateNotifier extends Notifier<AuthState> {
       return AuthState.authenticated(method: AuthMethod.none);
     }
     return AuthState.initial();
+  }
+
+  /// 앱이 백그라운드로 갈 때 호출한다 (생명주기 paused/hidden).
+  ///
+  /// 이미 기록돼 있으면 덮어쓰지 않는다 — 비활성→일시정지 전환이 반복돼도
+  /// "처음 떠난 시각"을 기준으로 경과를 잰다.
+  void markBackgrounded({DateTime? now}) {
+    _backgroundedAt ??= now ?? DateTime.now();
+  }
+
+  /// 앱이 포그라운드로 돌아올 때 호출한다 (생명주기 resumed).
+  ///
+  /// 잠금이 설정돼 있고(`userAuthOption != none`) 유예 시간[grace]을 넘겨
+  /// 떠나 있었으면 인증 상태를 초기로 되돌려 다시 잠그고 true를 돌려준다.
+  /// 라우터가 authState를 듣고 있어(M2) 보호 화면에서는 즉시 `/auth`로 간다.
+  /// 잠글 것이 없거나(플래그 OFF·none) 이미 잠겨 있으면 건드리지 않는다.
+  bool relockIfBackgroundedLongerThan({
+    Duration grace = kRelockGrace,
+    DateTime? now,
+  }) {
+    final since = _backgroundedAt;
+    _backgroundedAt = null;
+    if (since == null || !state.isAuthenticated) return false;
+    if (!AppFeatureConfig.isAuthenticationEnabled ||
+        ref.read(settingsProvider).userAuthOption == UserAuthOption.none) {
+      return false;
+    }
+    // 음수 경과 = 백그라운드 중 기기 시계를 과거로 돌림 → 우회 차단(fail-closed).
+    final elapsed = (now ?? DateTime.now()).difference(since);
+    if (!elapsed.isNegative && elapsed < grace) return false;
+    state = AuthState.initial();
+    logger.d('AuthState: Re-locked after background');
+    return true;
   }
 
   /// 생체 인증 수행
@@ -120,7 +151,6 @@ class AuthStateNotifier extends Notifier<AuthState> {
           isAuthenticated: false,
           errorMessage: 'auth.biometricFailed'.tr(),
         );
-
       }
       return success;
     } catch (e) {
@@ -148,7 +178,6 @@ class AuthStateNotifier extends Notifier<AuthState> {
           isAuthenticated: false,
           errorMessage: 'auth.pinFailed'.tr(),
         );
-
       }
       return success;
     } catch (e) {
@@ -163,18 +192,19 @@ class AuthStateNotifier extends Notifier<AuthState> {
   }
 
   /// 서버 이메일 인증 메커니즘 (firebase_auth 래퍼 — package:authentication).
-  static const _emailService = FirebaseEmailAuthService();
+  @visibleForTesting
+  FirebaseEmailAuthService emailService = const FirebaseEmailAuthService();
 
   /// Firebase Auth 사용 가능 여부 (서버 계정 경로 게이트)
   bool get _firebaseAuthReady =>
-      AppFeatureConfig.isFirebaseEnabled && _emailService.isFirebaseReady;
+      AppFeatureConfig.isFirebaseEnabled && emailService.isFirebaseReady;
 
   /// 로그아웃
   Future<void> signOut() async {
     try {
       // 서버 세션 종료 (email 인증으로 로그인한 경우)
       if (state.method == AuthMethod.email && _firebaseAuthReady) {
-        await _emailService.signOut();
+        await emailService.signOut();
       }
 
       // initial() 하드코딩 금지 — build()가 재유도해야 잠금 미설정(none)
@@ -199,12 +229,14 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// @return 삭제 성공 여부
   Future<bool> deleteAccount() async {
     if (!AppFeatureConfig.isAccountDeletionEnabled || !_firebaseAuthReady) {
-      logger.w('AuthState: Account deletion unavailable '
-          '(flag off or Firebase not initialized)');
+      logger.w(
+        'AuthState: Account deletion unavailable '
+        '(flag off or Firebase not initialized)',
+      );
       return false;
     }
 
-    final authUser = _emailService.currentUser;
+    final authUser = emailService.currentUser;
     if (authUser == null) {
       logger.w('AuthState: No server account to delete');
       return false;
@@ -218,7 +250,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
         logger.w('AuthState: Local user data cleanup failed: $e');
       }
 
-      await _emailService.deleteCurrentUser();
+      await emailService.deleteCurrentUser();
       // initial() 하드코딩 금지 — signOut과 동일하게 build() 재유도.
       ref.invalidateSelf();
       logger.d('AuthState: Account deleted');

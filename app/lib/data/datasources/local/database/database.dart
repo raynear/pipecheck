@@ -18,6 +18,10 @@ mixin TableWithTimestamps on Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+/// 현재 스키마 버전. 테이블·컬럼을 바꾸면 올리고 [AppDatabase.migration]의
+/// `onUpgrade`에 단계를 더한다(위 안내). 백업/복원이 이 값을 기록·대조한다.
+const int appSchemaVersion = 1;
+
 @DriftDatabase(
   tables: [
     // Active tables with definitions in lib/data/definitions/
@@ -56,7 +60,7 @@ class AppDatabase extends _$AppDatabase {
   @visibleForTesting
   AppDatabase.forTesting(super.executor);
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => appSchemaVersion;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -64,6 +68,18 @@ class AppDatabase extends _$AppDatabase {
       logger.d('Database onCreate called');
       await m.createAll();
       logger.d('All tables created successfully');
+    },
+    // 출시 후 테이블·컬럼을 바꿀 때의 절차 (안 하면 기존 설치본에서 `no such table`):
+    //  1. appSchemaVersion을 올린다.
+    //  2. 아래에 단계를 더한다 — 예) 새 테이블:
+    //       if (from < 2) await m.createTable($NewTable);   // 이 클래스의 테이블 접근자
+    //     새 컬럼: `if (from < 3) await m.addColumn(table, table.col);`
+    //  3. `dart run drift_dev schema dump lib/data/datasources/local/database/database.dart drift_schemas/`
+    //     로 새 버전 덤프를 만들고 `dart run drift_dev schema generate drift_schemas/ test/generated_migrations/`
+    //     를 다시 돌린다 — test/unit/drift_migration_test.dart가 덤프와 현재 스키마를 대조해
+    //     이 절차를 빠뜨리면 빨개진다.
+    onUpgrade: (Migrator m, int from, int to) async {
+      logger.d('Database onUpgrade: $from -> $to');
     },
     beforeOpen: (details) async {
       logger.d('Database beforeOpen called');
@@ -87,7 +103,10 @@ LazyDatabase _openConnection() {
     logger.d('Database path: $file');
 
     // 개발 모드에서 데이터베이스 재생성 옵션
-    const forceRecreate = bool.fromEnvironment('FORCE_DB_RECREATE', defaultValue: false);
+    const forceRecreate = bool.fromEnvironment(
+      'FORCE_DB_RECREATE',
+      defaultValue: false,
+    );
     if (forceRecreate) {
       final dbFile = File(file);
       if (await dbFile.exists()) {

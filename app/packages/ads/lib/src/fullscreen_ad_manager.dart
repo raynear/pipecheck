@@ -21,6 +21,20 @@ class FullscreenAdManager {
   RewardedAd? _rewardedAd;
   RewardedInterstitialAd? _rewardedInterstitialAd;
 
+  // 로드 중 가드 — RewardedAd.load 등의 Future는 "요청 전송"에 끝나고 결과는 콜백으로 온다.
+  // 콜백이 오기 전에 다시 부르면 광고가 두 번 요청되고 늦게 온 쪽이 먼저 온 쪽을 덮어 누수된다.
+  bool _loadingRewarded = false;
+  bool _loadingRewardedInterstitial = false;
+  bool _loadingInterstitial = false;
+
+  // 표시 중 가드 — 표시 중 재호출이 fullScreenContentCallback을 덮어쓰면 먼저 건 콜백이 소실된다.
+  bool _showingRewarded = false;
+  bool _showingRewardedInterstitial = false;
+  bool _showingInterstitial = false;
+
+  // dispose 뒤에 도착한 로드 콜백이 광고를 다시 들고 있지 않게 한다.
+  bool _disposed = false;
+
   // 재시도 카운터들
   int _numInterstitialLoadAttempts = 0;
   int _numRewardedLoadAttempts = 0;
@@ -65,16 +79,22 @@ class FullscreenAdManager {
       return;
     }
 
-    if (_rewardedAd != null) {
-      return; // 이미 로드된 광고가 있음
+    if (_rewardedAd != null || _loadingRewarded || _disposed) {
+      return; // 이미 로드됐거나 로드 중이거나 해제됨
     }
 
+    _loadingRewarded = true;
     try {
       await RewardedAd.load(
         adUnitId: rewardedAdId!,
         request: AdConsentManager.currentAdRequest(),
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (RewardedAd ad) {
+            _loadingRewarded = false;
+            if (_disposed) {
+              ad.dispose();
+              return;
+            }
             _rewardedAd = ad;
             _numRewardedLoadAttempts = 0;
             _rewardedAd!.setImmersiveMode(true);
@@ -82,6 +102,7 @@ class FullscreenAdManager {
           },
           onAdFailedToLoad: (LoadAdError error) async {
             logger.e('RewardedAd failed to load: $error');
+            _loadingRewarded = false;
             _numRewardedLoadAttempts += 1;
             _rewardedAd = null;
 
@@ -97,6 +118,7 @@ class FullscreenAdManager {
         ),
       );
     } catch (e) {
+      _loadingRewarded = false;
       logger.e('Error in _loadRewardedAd: $e');
       fallbackRewarded = Image.asset('assets/images/fallback_fullscreen.jpg');
     }
@@ -115,16 +137,22 @@ class FullscreenAdManager {
       return;
     }
 
-    if (_rewardedInterstitialAd != null) {
-      return; // 이미 로드된 광고가 있음
+    if (_rewardedInterstitialAd != null || _loadingRewardedInterstitial || _disposed) {
+      return; // 이미 로드됐거나 로드 중이거나 해제됨
     }
 
+    _loadingRewardedInterstitial = true;
     try {
       await RewardedInterstitialAd.load(
         adUnitId: rewardedInterstitialAdId!,
         request: AdConsentManager.currentAdRequest(),
         rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
           onAdLoaded: (RewardedInterstitialAd ad) {
+            _loadingRewardedInterstitial = false;
+            if (_disposed) {
+              ad.dispose();
+              return;
+            }
             _rewardedInterstitialAd = ad;
             _numRewardedInterstitialLoadAttempts = 0;
             _rewardedInterstitialAd!.setImmersiveMode(true);
@@ -132,6 +160,7 @@ class FullscreenAdManager {
           },
           onAdFailedToLoad: (LoadAdError error) async {
             logger.e('RewardedInterstitialAd failed to load: $error');
+            _loadingRewardedInterstitial = false;
             _numRewardedInterstitialLoadAttempts += 1;
             _rewardedInterstitialAd = null;
 
@@ -146,6 +175,7 @@ class FullscreenAdManager {
         ),
       );
     } catch (e) {
+      _loadingRewardedInterstitial = false;
       logger.e('Error in _loadRewardedInterstitialAd: $e');
     }
   }
@@ -164,16 +194,22 @@ class FullscreenAdManager {
       return;
     }
 
-    if (_interstitialAd != null) {
-      return; // 이미 로드된 광고가 있음
+    if (_interstitialAd != null || _loadingInterstitial || _disposed) {
+      return; // 이미 로드됐거나 로드 중이거나 해제됨
     }
 
+    _loadingInterstitial = true;
     try {
       await InterstitialAd.load(
         adUnitId: interstitialAdId!,
         request: AdConsentManager.currentAdRequest(),
         adLoadCallback: InterstitialAdLoadCallback(
           onAdLoaded: (InterstitialAd ad) {
+            _loadingInterstitial = false;
+            if (_disposed) {
+              ad.dispose();
+              return;
+            }
             _interstitialAd = ad;
             _numInterstitialLoadAttempts = 0;
             _interstitialAd!.setImmersiveMode(true);
@@ -181,6 +217,7 @@ class FullscreenAdManager {
           },
           onAdFailedToLoad: (LoadAdError error) async {
             logger.e('InterstitialAd failed to load: $error');
+            _loadingInterstitial = false;
             _numInterstitialLoadAttempts += 1;
             _interstitialAd = null;
 
@@ -196,6 +233,7 @@ class FullscreenAdManager {
         ),
       );
     } catch (e) {
+      _loadingInterstitial = false;
       logger.e('Error in _loadInterstitialAd: $e');
       fallbackInterstitial = Image.asset('assets/images/fallback_fullscreen.jpg');
     }
@@ -216,7 +254,19 @@ class FullscreenAdManager {
       return;
     }
 
-    await ensureInitialized();
+    if (_showingRewarded) {
+      logger.w('Rewarded ad already showing');
+      onAdFailed?.call();
+      return;
+    }
+
+    try {
+      await ensureInitialized();
+    } catch (e) {
+      logger.e('Ad SDK initialization failed - skipping rewarded ad: $e');
+      onAdFailed?.call();
+      return;
+    }
 
     if (_rewardedAd == null) {
       logger.w('Rewarded ad not ready');
@@ -225,9 +275,11 @@ class FullscreenAdManager {
       return;
     }
 
+    _showingRewarded = true;
     _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (RewardedAd ad) {
         logger.d('Rewarded ad dismissed');
+        _showingRewarded = false;
         ad.dispose();
         _rewardedAd = null;
         loadRewardedAd(); // 다음 광고 미리 로드
@@ -235,6 +287,7 @@ class FullscreenAdManager {
       },
       onAdFailedToShowFullScreenContent: (RewardedAd ad, AdError error) {
         logger.e('Rewarded ad failed to show: $error');
+        _showingRewarded = false;
         ad.dispose();
         _rewardedAd = null;
         loadRewardedAd(); // 다음 광고 미리 로드
@@ -251,6 +304,7 @@ class FullscreenAdManager {
       );
     } catch (e) {
       logger.e('Error showing rewarded ad: $e');
+      _showingRewarded = false;
       onAdFailed?.call();
     }
   }
@@ -268,7 +322,19 @@ class FullscreenAdManager {
       return;
     }
 
-    await ensureInitialized();
+    if (_showingRewardedInterstitial) {
+      logger.w('Rewarded Interstitial ad already showing');
+      onAdFailed?.call();
+      return;
+    }
+
+    try {
+      await ensureInitialized();
+    } catch (e) {
+      logger.e('Ad SDK initialization failed - skipping rewarded interstitial ad: $e');
+      onAdFailed?.call();
+      return;
+    }
 
     if (_rewardedInterstitialAd == null) {
       logger.w('Rewarded Interstitial ad not ready');
@@ -277,9 +343,11 @@ class FullscreenAdManager {
       return;
     }
 
+    _showingRewardedInterstitial = true;
     _rewardedInterstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (RewardedInterstitialAd ad) {
         logger.d('Rewarded Interstitial ad dismissed');
+        _showingRewardedInterstitial = false;
         ad.dispose();
         _rewardedInterstitialAd = null;
         loadRewardedInterstitialAd(); // 다음 광고 미리 로드
@@ -287,6 +355,7 @@ class FullscreenAdManager {
       },
       onAdFailedToShowFullScreenContent: (RewardedInterstitialAd ad, AdError error) {
         logger.e('Rewarded Interstitial ad failed to show: $error');
+        _showingRewardedInterstitial = false;
         ad.dispose();
         _rewardedInterstitialAd = null;
         loadRewardedInterstitialAd(); // 다음 광고 미리 로드
@@ -303,6 +372,7 @@ class FullscreenAdManager {
       );
     } catch (e) {
       logger.e('Error showing rewarded interstitial ad: $e');
+      _showingRewardedInterstitial = false;
       onAdFailed?.call();
     }
   }
@@ -343,15 +413,17 @@ class FullscreenAdManager {
       return;
     }
 
-    if (_interstitialAd == null) {
-      logger.w('Interstitial ad not ready, calling fallback');
+    if (_interstitialAd == null || _showingInterstitial) {
+      logger.w('Interstitial ad not ready or already showing, calling fallback');
       (onAdFailed ?? onAdDismissed)();
       return;
     }
 
+    _showingInterstitial = true;
     _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (InterstitialAd ad) {
         logger.d('Interstitial ad dismissed');
+        _showingInterstitial = false;
         ad.dispose();
         _interstitialAd = null;
         loadInterstitialAd(); // 다음 광고 미리 로드
@@ -359,6 +431,7 @@ class FullscreenAdManager {
       },
       onAdFailedToShowFullScreenContent: (InterstitialAd ad, AdError error) {
         logger.e('Interstitial ad failed to show: $error');
+        _showingInterstitial = false;
         ad.dispose();
         _interstitialAd = null;
         loadInterstitialAd(); // 다음 광고 미리 로드
@@ -370,6 +443,7 @@ class FullscreenAdManager {
       await _interstitialAd!.show();
     } catch (e) {
       logger.e('Error showing interstitial ad: $e');
+      _showingInterstitial = false;
       (onAdFailed ?? onAdDismissed)();
     }
   }
@@ -404,15 +478,23 @@ class FullscreenAdManager {
       return;
     }
 
+    if (_showingInterstitial) {
+      logger.w('Interstitial ad already showing');
+      return;
+    }
+
+    _showingInterstitial = true;
     _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (InterstitialAd ad) {
         logger.d('Interstitial ad dismissed');
+        _showingInterstitial = false;
         ad.dispose();
         _interstitialAd = null;
         loadInterstitialAd(); // 다음 광고 미리 로드
       },
       onAdFailedToShowFullScreenContent: (InterstitialAd ad, AdError error) {
         logger.e('Interstitial ad failed to show: $error');
+        _showingInterstitial = false;
         ad.dispose();
         _interstitialAd = null;
         loadInterstitialAd(); // 다음 광고 미리 로드
@@ -423,6 +505,7 @@ class FullscreenAdManager {
       _interstitialAd!.show();
     } catch (e) {
       logger.e('Error showing interstitial ad: $e');
+      _showingInterstitial = false;
     }
   }
 
@@ -564,6 +647,7 @@ class FullscreenAdManager {
 
   // 리소스 해제
   void dispose() {
+    _disposed = true;
     _interstitialAd?.dispose();
     _interstitialAd = null;
 
