@@ -16,6 +16,8 @@ import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase_storekit/store_kit_2_wrappers.dart' show SK2Transaction;
 import 'package:utils/utils.dart';
 
+final InAppPurchase _inAppPurchase = InAppPurchase.instance;
+
 Future<Map<String, ProductDetails>> loadProducts() async {
   // 인앱 구매가 비활성화된 경우 빈 맵 반환
   if (!AppFeatureConfig.isInAppPurchaseEnabled) {
@@ -23,7 +25,7 @@ Future<Map<String, ProductDetails>> loadProducts() async {
     return {};
   }
 
-  final bool available = await InAppPurchase.instance.isAvailable();
+  final bool available = await _inAppPurchase.isAvailable();
   if (!available) {
     logger.w('Unable to connect to the app store');
     return {};
@@ -31,7 +33,7 @@ Future<Map<String, ProductDetails>> loadProducts() async {
 
   final appConfig = AppConfig();
   final Set<String> kIds = appConfig.productIds.values.toSet();
-  final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails(kIds);
+  final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(kIds);
 
   if (response.notFoundIDs.isNotEmpty) {
     logger.w('Some product IDs could not be found: ${response.notFoundIDs}');
@@ -76,15 +78,17 @@ class PremiumEntitlement {
   bool get isActive => hasLifetime || subscriptionExpiry != null;
 }
 
+/// 만료일을 안 주는 구독의 임시 창. 활성 여부는 openEnded 플래그가 정하고, 이 값은 만료일을 null이 아니게 하는 용도다.
+const _openEndedWindow = Duration(days: 7);
+
 /// 스토어 권리 목록 → 프리미엄 상태. 순서와 무관하다(평생·월간이 섞여도, 옛 갱신이
 /// 뒤에 와도 결과가 같다). 만료일을 로컬에서 더해 만들지 않는다 — 스토어가 준 값만 쓰고,
 /// 만료일을 주지 않는 구독([StoreEntitlement.openEnded], Google Play)만 다음 재조회까지
-/// [openEndedWindow]만큼 활성으로 본다. 만료일을 모르는 그 밖의 구독은 권리가 아니다.
+/// 성공한 조회가 소유하지 않는다고 말할 때까지 활성으로 본다. 만료일을 모르는 그 밖의 구독은 권리가 아니다.
 PremiumEntitlement derivePremiumEntitlement(
   Iterable<StoreEntitlement> items, {
   required Map<String, String> productIds,
   required DateTime now,
-  Duration openEndedWindow = const Duration(days: 7),
 }) {
   var lifetime = false;
   DateTime? expiry;
@@ -94,7 +98,7 @@ PremiumEntitlement derivePremiumEntitlement(
     if (e.productId == productIds['lifetime']) {
       lifetime = true;
     } else if (e.productId == productIds['monthly'] || e.productId == productIds['yearly']) {
-      final until = e.expiresAt ?? (e.openEnded ? now.add(openEndedWindow) : null);
+      final until = e.expiresAt ?? (e.openEnded ? now.add(_openEndedWindow) : null);
       if (until != null && until.isAfter(now) && (expiry == null || until.isAfter(expiry))) {
         expiry = until;
         openEnded = e.expiresAt == null;
@@ -109,8 +113,8 @@ PremiumEntitlement derivePremiumEntitlement(
 }
 
 /// StoreKit 2 거래 → [StoreEntitlement]. 날짜 문자열은 기기 로케일에 따라 달라져 믿을 수
-/// 없으므로, 스토어가 준 JSON(밀리초 epoch)을 쓰고 대비책도 숫자(epoch-ms) 문자열만 읽는다.
-/// 둘 다 안 되면 만료일을 모르는 것이고 iOS에서는 권리 없음이다.
+/// 없으므로, 스토어가 준 JSON(밀리초 epoch)만 읽는다. 만료일을 모르면 iOS에서는 권리 없음이다.
+/// 업그레이드로 대체된 옛 거래(isUpgraded)는 회수된 것과 같이 권리에서 뺀다.
 StoreEntitlement entitlementFromSk2(SK2Transaction t) {
   DateTime? expiresAt;
   var revoked = false;
@@ -119,17 +123,15 @@ StoreEntitlement entitlementFromSk2(SK2Transaction t) {
     if (json is Map) {
       final exp = json['expiresDate'];
       if (exp is num) expiresAt = DateTime.fromMillisecondsSinceEpoch(exp.round());
-      revoked = json['revocationDate'] != null;
+      revoked = json['revocationDate'] != null || json['isUpgraded'] == true;
     }
   } catch (_) {}
-  final ms = int.tryParse(t.expirationDate ?? '');
-  if (expiresAt == null && ms != null) expiresAt = DateTime.fromMillisecondsSinceEpoch(ms);
   return StoreEntitlement(productId: t.productId, expiresAt: expiresAt, revoked: revoked);
 }
 
 /// 스토어에서 지금 유효한 권리를 읽어 온다. 실패는 예외로 알린다(빈 목록과 구분).
 Future<List<StoreEntitlement>> fetchStoreEntitlements() async {
-  final iap = InAppPurchase.instance;
+  final iap = _inAppPurchase;
   if (!await iap.isAvailable()) throw StateError('store unavailable');
   switch (defaultTargetPlatform) {
     case TargetPlatform.iOS:
@@ -164,12 +166,10 @@ class InAppPurchaseService {
   InAppPurchaseService(
     this.settingsNotifier, {
     this.snackBarService,
-    Map<String, String>? productIds,
     DateTime Function()? clock,
-  })  : _productIds = productIds,
-        _clock = clock ?? DateTime.now {
+  }) : _clock = clock ?? DateTime.now {
     // 부팅 때부터 붙어 있어야 앱이 꺼진 사이 도착한 거래(갱신·대기 승인)를 받는다.
-    _subscription = InAppPurchase.instance.purchaseStream.listen(
+    _subscription = _inAppPurchase.purchaseStream.listen(
       _listenToPurchaseUpdated,
       onError: (Object e) => logger.e('Purchase stream error: $e'),
     );
@@ -177,12 +177,10 @@ class InAppPurchaseService {
 
   final SettingsNotifier settingsNotifier;
   final SnackBarService? snackBarService;
-  final Map<String, String>? _productIds;
   final DateTime Function() _clock;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   Future<void> _refreshQueue = Future.value();
-
-  Map<String, String> get _ids => _productIds ?? AppConfig().productIds;
+  String? _buying; // 사용자가 buyProduct로 시작한 상품
 
   /// 스토어를 다시 읽어 프리미엄 상태를 맞춘다. 조회가 실패하면(오프라인 등) 마지막
   /// 상태를 그대로 두고 null을 돌려준다 — 결제한 사용자를 오프라인에서 잠그지 않는다.
@@ -197,7 +195,7 @@ class InAppPurchaseService {
   Future<PremiumEntitlement?> _refreshNow() async {
     try {
       final items = await fetchStoreEntitlements();
-      final entitlement = derivePremiumEntitlement(items, productIds: _ids, now: _clock());
+      final entitlement = derivePremiumEntitlement(items, productIds: AppConfig().productIds, now: _clock());
       await settingsNotifier.applyStoreEntitlement(
         hasLifetime: entitlement.hasLifetime,
         subscriptionExpiry: entitlement.subscriptionExpiry,
@@ -221,8 +219,9 @@ class InAppPurchaseService {
         snackBarService?.showError('in_app_purchase.purchaseFailed'.tr());
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
-        needsRefresh = true;
+        // 복원은 restorePurchase가 직접 한 번 조회하므로 구매만 여기서 조회한다.
         if (purchaseDetails.status == PurchaseStatus.purchased) {
+          needsRefresh = true;
           newlyPurchased.add(purchaseDetails.productID);
         }
       }
@@ -230,7 +229,7 @@ class InAppPurchaseService {
       // Google Play는 3일 뒤 자동 환불한다.
       if (purchaseDetails.pendingCompletePurchase) {
         try {
-          await InAppPurchase.instance.completePurchase(purchaseDetails);
+          await _inAppPurchase.completePurchase(purchaseDetails);
         } catch (e) {
           logger.e('completePurchase failed: $e');
         }
@@ -243,10 +242,13 @@ class InAppPurchaseService {
       return;
     }
     for (final productId in newlyPurchased) {
-      final role = _ids.entries.firstWhereOrNull((e) => e.value == productId)?.key;
+      // 자동 갱신 등 사용자가 지금 시작하지 않은 거래는 알리지 않는다.
+      if (productId != _buying) continue;
+      _buying = null;
+      final role = AppConfig().productIds.entries.firstWhereOrNull((e) => e.value == productId)?.key;
       if (role == null) {
         snackBarService?.showError('Unknown subscription type');
-      } else if (entitlement.isActive) {
+      } else if (role == 'lifetime' ? entitlement.hasLifetime : entitlement.subscriptionExpiry != null) {
         snackBarService?.showSuccess('${role[0].toUpperCase()}${role.substring(1)} subscription activated');
       }
     }
@@ -262,29 +264,32 @@ class InAppPurchaseService {
       }
 
       final PurchaseParam purchaseParam = await _purchaseParam(prod);
-      final bool success = await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
+      _buying = prod.id;
+      final bool success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
 
       // 이 success가 구매완료하고 성공했을때 반환하는 것이 아님
       if (success) {
         logger.d('Purchase process started successfully: ${prod.title}');
       } else {
         logger.e('Purchase process failed to start: ${prod.title}');
+        _buying = null;
       }
 
       return success;
     } catch (e) {
       logger.e('Error occurred while starting purchase: $e');
+      _buying = null;
       return false;
     }
   }
 
   /// Android에서 이미 다른 구독이 활성이면 새 구독을 "변경"으로 산다 — 아니면 구독이 둘 겹친다.
   Future<PurchaseParam> _purchaseParam(ProductDetails prod) async {
-    final ids = _ids;
+    final ids = AppConfig().productIds;
     final isSub = prod.id == ids['monthly'] || prod.id == ids['yearly'];
     if (defaultTargetPlatform == TargetPlatform.android && isSub) {
       try {
-        final past = await _androidPast(InAppPurchase.instance);
+        final past = await _androidPast(_inAppPurchase);
         final old = past.firstWhereOrNull((p) =>
             p.status == PurchaseStatus.purchased &&
             p.productID != prod.id &&
@@ -307,7 +312,7 @@ class InAppPurchaseService {
 
   Future<PurchaseDetails?> _checkPendingPurchase(String productId) async {
     try {
-      final purchases = await InAppPurchase.instance.purchaseStream
+      final purchases = await _inAppPurchase.purchaseStream
           .firstWhere(
             (purchases) => purchases.any((purchase) => purchase.productID == productId),
             orElse: () => <PurchaseDetails>[],
@@ -326,7 +331,7 @@ class InAppPurchaseService {
   /// 구매 복원. 스토어에 복원을 요청한 뒤 **실제로 권리가 생겼는지**로 성공을 판정한다.
   Future<void> restorePurchase() async {
     try {
-      await InAppPurchase.instance.restorePurchases();
+      await _inAppPurchase.restorePurchases();
       final entitlement = await refreshEntitlement();
       if (entitlement == null) {
         snackBarService?.showError('Failed to restore purchase');

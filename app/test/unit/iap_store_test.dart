@@ -21,7 +21,6 @@ import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_inte
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:orange/orange.dart';
 
-const _ids = {'monthly': 'm', 'yearly': 'y', 'lifetime': 'l'};
 
 PurchaseWrapper _wrapper(String product, PurchaseStateWrapper state) => PurchaseWrapper(
       orderId: 'o-$product',
@@ -222,10 +221,7 @@ void main() {
     setUp(() {
       c = ProviderContainer();
       addTearDown(c.dispose);
-      service = InAppPurchaseService(
-        c.read(settingsProvider.notifier),
-        productIds: _ids,
-      );
+      service = InAppPurchaseService(c.read(settingsProvider.notifier));
       addTearDown(service.dispose);
     });
 
@@ -294,7 +290,7 @@ void main() {
       addTearDown(c.dispose);
       n = c.read(settingsProvider.notifier);
       snack = _FakeSnack();
-      service = InAppPurchaseService(n, snackBarService: snack, productIds: _ids, clock: () => _now);
+      service = InAppPurchaseService(n, snackBarService: snack, clock: () => _now);
       addTearDown(service.dispose);
     });
 
@@ -345,8 +341,38 @@ void main() {
         _purchase('l', PurchaseStatus.restored),
         _purchase('m', PurchaseStatus.restored),
       ]);
-      await pump();
+      await service.restorePurchase();
       expect(c.read(settingsProvider).hasLifetime, isTrue);
+    });
+
+    test('복원 이벤트는 마무리만 하고 조회는 restorePurchase 한 번뿐이다', () async {
+      platform.controller.add([_purchase('m', PurchaseStatus.restored)]);
+      await pump();
+      expect(platform.completed, hasLength(1));
+      expect(addition.calls, 0);
+    });
+
+    test('사용자가 시작하지 않은 구매(자동 갱신)는 성공 알림을 띄우지 않는다', () async {
+      addition.purchases = [_wrapper('m', PurchaseStateWrapper.purchased)];
+      platform.controller.add([_purchase('m', PurchaseStatus.purchased)]);
+      await pump();
+      expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
+      expect(snack.log.where((l) => l.startsWith('success:')), isEmpty);
+    });
+
+    test('buyProduct로 시작한 상품이 반영되면 성공 알림, 다른 상품 권리만 있으면 알림 없음', () async {
+      addition.purchases = [_wrapper('l', PurchaseStateWrapper.purchased)];
+      await service.buyProduct(_product('m'));
+      platform.controller.add([_purchase('m', PurchaseStatus.purchased)]);
+      await pump();
+      expect(snack.log.where((l) => l.startsWith('success:')), isEmpty,
+          reason: '월간은 반영되지 않았고 평생 권리만 있다');
+
+      addition.purchases = [_wrapper('m', PurchaseStateWrapper.purchased)];
+      await service.buyProduct(_product('m'));
+      platform.controller.add([_purchase('m', PurchaseStatus.purchased)]);
+      await pump();
+      expect(snack.log.where((l) => l.startsWith('success:')), hasLength(1));
     });
 
     test('대기(pending) 거래는 건드리지도 조회하지도 않는다', () async {

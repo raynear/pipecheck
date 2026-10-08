@@ -53,6 +53,16 @@ void main() {
     expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
   });
 
+  test('열린 구독은 임시 창 날짜가 지나도(8일 뒤 조회 실패) 성공한 조회가 부정하기 전까지 활성', () async {
+    await n.applyStoreEntitlement(
+        hasLifetime: false,
+        subscriptionExpiry: DateTime.now().subtract(const Duration(days: 1)),
+        subscriptionOpenEnded: true);
+    expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
+    await n.applyStoreEntitlement(hasLifetime: false, subscriptionExpiry: null);
+    expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
+  });
+
   test('권리 값은 저장했다가 다시 읽어도 그대로(재시작 후 유지)', () async {
     await n.applyStoreEntitlement(
         hasLifetime: true, subscriptionExpiry: future, subscriptionOpenEnded: true);

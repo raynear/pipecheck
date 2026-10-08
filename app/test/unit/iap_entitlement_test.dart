@@ -98,13 +98,14 @@ void main() {
       expect(e.revoked, isTrue);
     });
 
-    test('JSON이 깨지면 epoch-ms 문자열로만 대비한다', () {
-      final exp = DateTime.utc(2026, 11, 8).millisecondsSinceEpoch;
-      expect(entitlementFromSk2(tx(json: 'not json', expiration: '$exp')).expiresAt,
-          DateTime.fromMillisecondsSinceEpoch(exp));
+    test('업그레이드로 대체된 옛 거래(isUpgraded)는 만료일이 남아 있어도 권리가 아니다', () {
+      final exp = _now.add(const Duration(days: 20)).millisecondsSinceEpoch;
+      final e = entitlementFromSk2(tx(json: '{"expiresDate":$exp,"isUpgraded":true}'));
+      expect(e.revoked, isTrue);
+      expect(_derive([e]).isActive, isFalse);
     });
 
-    test('JSON도 숫자 문자열도 못 읽으면 만료일 모름 → 활성이 아니다', () {
+    test('JSON을 못 읽으면 만료일 모름 → 활성이 아니다', () {
       final e = entitlementFromSk2(tx(json: 'not json', expiration: '2026-11-08 09:30:00'));
       expect(e.expiresAt, isNull);
       expect(_derive([e]).isActive, isFalse);

@@ -263,7 +263,10 @@ extension SettingsExtension on Settings {
   }
 
   bool get isSubscriptionActive {
-    return hasLifetime || (subscriptionExpiryDate != null && subscriptionExpiryDate!.isAfter(DateTime.now()));
+    // 열린 구독(Google Play)은 성공한 조회가 "소유 안 함"이라고 말할 때까지 날짜와 무관하게 활성.
+    return hasLifetime ||
+        subscriptionOpenEnded ||
+        (subscriptionExpiryDate != null && subscriptionExpiryDate!.isAfter(DateTime.now()));
   }
 }
 

@@ -449,11 +449,7 @@ class _SettingsState extends ConsumerState<SettingsView> {
                 Container(),
               ]),
               settings.isSubscriptionActive
-                  ? Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      SText('Subscription Status'),
-                      SText('Active until {}',
-                          args: [DateFormat('yyyy-MM-dd').format(settings.subscriptionExpiryDate!)]),
-                    ])
+                  ? SubscriptionStatusRow(settings: settings)
                   : Column(children: [
                       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                         SText('Premium license'),
@@ -1068,5 +1064,26 @@ class _SettingsState extends ConsumerState<SettingsView> {
     }
 
     RaynearNotification().setReminderNotification();
+  }
+}
+
+/// 구독 상태 행 — 평생 / 열린 구독(만료일 모름) / 만료일 있는 구독.
+class SubscriptionStatusRow extends StatelessWidget {
+  const SubscriptionStatusRow({super.key, required this.settings});
+
+  final Settings settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final expiry = settings.subscriptionExpiryDate;
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      SText('Subscription Status'),
+      if (settings.hasLifetime)
+        SText('Lifetime')
+      else if (settings.subscriptionOpenEnded || expiry == null)
+        SText('Active')
+      else
+        SText('Active until {}', args: [DateFormat('yyyy-MM-dd').format(expiry)]),
+    ]);
   }
 }
