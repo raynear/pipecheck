@@ -103,8 +103,6 @@ abstract class Settings with _$Settings {
     // 스토어가 만료일을 안 주는 구독(Google Play) — 날짜 없이, 성공한 스토어 조회가
     // "소유 안 함"이라고 말할 때까지 활성이다.
     @Default(false) bool subscriptionOpenEnded,
-    // 저장된 만료일(iOS)에 [subscriptionGracePeriod] 유예를 줘도 되는가 — 회수 증거가 없을 때만 true.
-    @Default(false) bool subscriptionGrace,
     // 개발 확인용 프리미엄 덮어쓰기 — 실제 권리(hasLifetime·구독)와 완전히 별개이고,
     // 스토어 재조회가 건드리지 않는다. devOverrideAllowed인 빌드에서만 효력이 있다.
     @Default(false) bool devPremium,
@@ -149,7 +147,6 @@ abstract class Settings with _$Settings {
 
       final bool hasLifetime = Orange.getBool('hasLifetime') ?? false;
       final bool subscriptionOpenEnded = Orange.getBool('subscriptionOpenEnded') ?? false;
-      final bool subscriptionGrace = Orange.getBool('subscriptionGrace') ?? false;
       final bool devPremium = Orange.getBool('devPremium') ?? false;
 
       final int appLaunchCount = Orange.getInt('appLaunchCount') ?? 0;
@@ -173,7 +170,6 @@ abstract class Settings with _$Settings {
         subscriptionExpiryDate: subscriptionExpiryDate,
         hasLifetime: hasLifetime,
         subscriptionOpenEnded: subscriptionOpenEnded,
-        subscriptionGrace: subscriptionGrace,
         devPremium: devPremium,
         appLaunchCount: appLaunchCount,
         designSystem: designSystem,
@@ -264,7 +260,6 @@ extension SettingsExtension on Settings {
       Orange.setString('subscriptionExpiryDate', subscriptionExpiryDate?.toIso8601String() ?? '');
       Orange.setBool('hasLifetime', hasLifetime);
       Orange.setBool('subscriptionOpenEnded', subscriptionOpenEnded);
-      Orange.setBool('subscriptionGrace', subscriptionGrace);
       Orange.setBool('devPremium', devPremium);
       Orange.setInt('appLaunchCount', appLaunchCount);
       Orange.setInt('designSystem', designSystem.index);
@@ -277,7 +272,6 @@ extension SettingsExtension on Settings {
         hasLifetime: hasLifetime,
         subscriptionExpiry: subscriptionExpiryDate,
         subscriptionOpenEnded: subscriptionOpenEnded,
-        subscriptionGrace: subscriptionGrace,
       );
 
   // 열린 구독(Google Play)은 성공한 조회가 "소유 안 함"이라고 말할 때까지 날짜와 무관하게 활성.
@@ -295,23 +289,20 @@ class PremiumEntitlement {
     required this.hasLifetime,
     required this.subscriptionExpiry,
     this.subscriptionOpenEnded = false,
-    this.subscriptionGrace = false,
   });
 
   final bool hasLifetime;
   final DateTime? subscriptionExpiry;
   final bool subscriptionOpenEnded;
 
-  /// [subscriptionExpiry]가 지난 뒤에도 [subscriptionGracePeriod] 동안 활성으로 본다.
-  final bool subscriptionGrace;
-
   bool get hasSubscription => subscriptionOpenEnded || subscriptionExpiry != null;
 
-  /// 지금 시각 기준 활성 여부 — 열린 구독은 날짜와 무관, 날짜가 있으면 미래여야 한다.
+  /// 지금 시각 기준 활성 여부 — 열린 구독은 날짜와 무관, 날짜가 있으면 만료일 + [subscriptionGracePeriod]가 미래여야 한다.
+  /// 만료일이 있는 구독은 iOS뿐이다(Android 열린 구독은 날짜가 없다).
   bool isActiveAt(DateTime now) =>
       hasLifetime ||
       subscriptionOpenEnded ||
-      (subscriptionExpiry?.add(subscriptionGrace ? subscriptionGracePeriod : Duration.zero).isAfter(now) ?? false);
+      (subscriptionExpiry?.add(subscriptionGracePeriod).isAfter(now) ?? false);
 }
 
 /// 개발 프리미엄 덮어쓰기를 인정하는 빌드인가 — 디버그 또는 `-dev` 접미사 내부 배포 빌드.
@@ -403,15 +394,13 @@ class SettingsNotifier extends Notifier<Settings> {
   Future<void> applyStoreEntitlement(PremiumEntitlement e) async {
     if (state.hasLifetime == e.hasLifetime &&
         state.subscriptionExpiryDate == e.subscriptionExpiry &&
-        state.subscriptionOpenEnded == e.subscriptionOpenEnded &&
-        state.subscriptionGrace == e.subscriptionGrace) {
+        state.subscriptionOpenEnded == e.subscriptionOpenEnded) {
       return;
     }
     await changeSettings(state.copyWith(
       hasLifetime: e.hasLifetime,
       subscriptionExpiryDate: e.subscriptionExpiry,
       subscriptionOpenEnded: e.subscriptionOpenEnded,
-      subscriptionGrace: e.subscriptionGrace,
     ));
   }
 }

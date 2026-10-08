@@ -29,8 +29,8 @@ void main() {
     expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
   });
 
-  test('구독 만료일이 지났으면 비활성, 남았으면 활성', () async {
-    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: DateTime.now().subtract(const Duration(days: 1))));
+  test('구독 만료일이 유예(3일)까지 지났으면 비활성, 남았으면 활성', () async {
+    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: DateTime.now().subtract(const Duration(days: 4))));
     expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
     await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: future));
     expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
@@ -128,17 +128,14 @@ void main() {
     expect(supportedLocales, locales);
   });
 
-  test('유예 플래그가 켜진 만료일은 3일까지, 꺼져 있으면 만료 즉시 비활성이며 재시작 뒤에도 유지된다', () async {
+  test('만료일은 3일 유예까지 활성이고 4일째는 비활성이며 재시작 뒤에도 같다', () async {
     final past = DateTime.now().subtract(const Duration(days: 2));
-    await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: past, subscriptionGrace: true));
-    expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
-    expect(Settings.fromOrange().subscriptionGrace, isTrue);
-
     await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: past));
-    expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
+    expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
+    expect(Settings.fromOrange().isSubscriptionActive, isTrue);
 
-    await n.applyStoreEntitlement(PremiumEntitlement(
-        hasLifetime: false, subscriptionExpiry: DateTime.now().subtract(const Duration(days: 4)), subscriptionGrace: true));
+    await n.applyStoreEntitlement(
+        PremiumEntitlement(hasLifetime: false, subscriptionExpiry: DateTime.now().subtract(const Duration(days: 4))));
     expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
   });
 }

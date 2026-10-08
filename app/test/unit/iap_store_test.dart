@@ -350,6 +350,56 @@ void main() {
       expect(s.subscriptionOpenEnded, isFalse);
     });
 
+    group('저장 만료일 바닥값은 iOS 전용', () {
+      InAppPurchaseService withFetch(List<StoreEntitlement> items) {
+        final svc = InAppPurchaseService(n,
+            snackBarService: snack, clock: () => _now, retryDelay: Duration.zero, fetch: () async => items);
+        addTearDown(svc.dispose);
+        return svc;
+      }
+
+      test('iOS 오프라인 캐시: 저장 만료일이 미래면 만료된 옛 거래만 와도 활성으로 남고, 3일 유예 경계를 지킨다', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        final old = [StoreEntitlement(productId: 'm', expiresAt: _now.subtract(const Duration(days: 300)))];
+
+        await n.applyStoreEntitlement(PremiumEntitlement(
+            hasLifetime: false, subscriptionExpiry: _now.add(const Duration(days: 5))));
+        final r = await withFetch(old).refreshEntitlement();
+        expect(r!.isActiveAt(_now), isTrue);
+        expect(c.read(settingsProvider).subscriptionExpiryDate, _now.add(const Duration(days: 5)));
+
+        // 저장 만료 2일 뒤는 유예 안, 4일 뒤는 밖
+        await n.applyStoreEntitlement(PremiumEntitlement(
+            hasLifetime: false, subscriptionExpiry: _now.subtract(const Duration(days: 2))));
+        expect((await withFetch(old).refreshEntitlement())!.isActiveAt(_now), isTrue);
+        await n.applyStoreEntitlement(PremiumEntitlement(
+            hasLifetime: false, subscriptionExpiry: _now.subtract(const Duration(days: 4))));
+        final out = await withFetch(old).refreshEntitlement();
+        expect(out!.isActiveAt(_now), isFalse);
+        expect(c.read(settingsProvider).subscriptionExpiryDate, isNull);
+      });
+
+      test('iOS: 저장 만료일을 만든 거래의 회수가 오면 바닥값 없이 비활성', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        final stored = _now.add(const Duration(days: 5));
+        await n.applyStoreEntitlement(PremiumEntitlement(hasLifetime: false, subscriptionExpiry: stored));
+        final r = await withFetch([StoreEntitlement(productId: 'm', expiresAt: stored, revoked: true)]).refreshEntitlement();
+        expect(r!.isActiveAt(_now), isFalse);
+        expect(c.read(settingsProvider).isSubscriptionActive, isFalse);
+      });
+
+      test('Android: 옛 버전이 저장한 미래 만료일은 바닥값이 아니다 — 환불·해지 뒤 빈 조회면 비활성', () async {
+        await n.applyStoreEntitlement(PremiumEntitlement(
+            hasLifetime: false, subscriptionExpiry: DateTime.now().add(const Duration(days: 30))));
+        expect(c.read(settingsProvider).isSubscriptionActive, isTrue);
+        addition.purchases = [];
+        await service.refreshEntitlement();
+        final s = c.read(settingsProvider);
+        expect(s.subscriptionExpiryDate, isNull);
+        expect(s.isSubscriptionActive, isFalse);
+      });
+    });
+
     test('평생+월간이 한 번에 복원돼도 평생이 남는다', () async {
       addition.purchases = [
         _wrapper('l', PurchaseStateWrapper.purchased),

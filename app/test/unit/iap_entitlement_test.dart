@@ -9,8 +9,8 @@ import 'package:in_app_purchase_storekit/store_kit_2_wrappers.dart' show SK2Tran
 const _ids = {'monthly': 'm', 'yearly': 'y', 'lifetime': 'l'};
 final _now = DateTime(2026, 10, 8, 12);
 
-StoreEntitlement _e(String id, {DateTime? exp, bool revoked = false, bool openEnded = false}) =>
-    StoreEntitlement(productId: id, expiresAt: exp, revoked: revoked, openEnded: openEnded);
+StoreEntitlement _e(String id, {DateTime? exp, bool revoked = false, bool superseded = false, bool openEnded = false}) =>
+    StoreEntitlement(productId: id, expiresAt: exp, revoked: revoked, superseded: superseded, openEnded: openEnded);
 
 PremiumEntitlement _derive(List<StoreEntitlement> items) =>
     derivePremiumEntitlement(items, productIds: _ids, now: _now);
@@ -117,27 +117,45 @@ void main() {
       expect(again([_e('m', exp: renewed)], _now.add(d(5))).subscriptionExpiry, renewed);
     });
 
-    test('회수된 거래의 만료일이 저장 만료일보다 이르지 않으면(경계 포함) 증거다', () {
+    test('저장 만료일을 만든 거래 자체의 회수(만료일 일치)는 증거다 — 유예·바닥값 없음', () {
       final stored = _now.add(d(5));
-      for (final exp in [stored, stored.add(day)]) {
-        final r = again([_e('m', exp: exp, revoked: true)], stored);
-        expect(r.isActiveAt(_now), isFalse, reason: '$exp');
-        expect(r.subscriptionGrace, isFalse);
+      final r = again([_e('m', exp: stored, revoked: true)], stored);
+      expect(r.isActiveAt(_now), isFalse);
+      expect(r.subscriptionExpiry, isNull);
+      // 1초만 달라도 같은 거래가 아니다
+      for (final exp in [stored.subtract(const Duration(seconds: 1)), stored.add(const Duration(seconds: 1))]) {
+        expect(again([_e('m', exp: exp, revoked: true)], stored).isActiveAt(_now), isTrue, reason: '$exp');
       }
-      // 저장 만료일보다 1초 이른 회수는 증거가 아니다
-      expect(again([_e('m', exp: stored.subtract(const Duration(seconds: 1)), revoked: true)], stored).isActiveAt(_now), isTrue);
+    });
+
+    test('다른 계보의 옛 환불(만료일이 더 먼 환불된 연간)은 증거가 아니다 — 오프라인 캐시가 옛 거래만 줘도 활성', () {
+      final stored = _now.add(d(10));
+      final r = again([
+        _e('y', exp: _now.add(d(200)), revoked: true),
+        _e('m', exp: _now.subtract(d(20))),
+      ], stored);
+      expect(r.subscriptionExpiry, stored);
+      expect(r.isActiveAt(_now), isTrue);
+    });
+
+    test('업그레이드로 대체된 옛 월간(만료일 = 저장값)만 보이는 오프라인 캐시는 저장값을 지킨다', () {
+      final stored = _now.add(d(5));
+      final r = again([_e('m', exp: stored, superseded: true)], stored);
+      expect(r.subscriptionExpiry, stored);
+      expect(r.isActiveAt(_now), isTrue);
+      // 대체된 거래 자체는 권리가 아니다
+      expect(_derive([_e('m', exp: stored, superseded: true)]).isActiveAt(_now), isFalse);
     });
 
     test('회수된 평생권은 증거다', () {
       expect(again([_e('l', revoked: true)], _now.add(d(5))).isActiveAt(_now), isFalse);
     });
 
-    test('증거가 있어도 살아 있는 다른 거래의 만료일은 유지되지만 유예는 없다', () {
+    test('증거가 있어도 살아 있는 다른 거래의 만료일은 유지된다', () {
       final live = _now.add(d(2));
-      final r = again([_e('m', exp: _now.add(d(9)), revoked: true), _e('m', exp: live)], _now.add(d(5)));
+      final stored = _now.add(d(5));
+      final r = again([_e('m', exp: stored, revoked: true), _e('m', exp: live)], stored);
       expect(r.subscriptionExpiry, live);
-      expect(r.subscriptionGrace, isFalse);
-      expect(r.isActiveAt(live.add(day)), isFalse);
     });
 
     test('유예 경계: 저장 만료 2일 뒤는 활성, 4일 뒤는 비활성(저장값은 늘지 않는다)', () {
@@ -159,11 +177,9 @@ void main() {
       expect(again([_e('m', exp: stored, revoked: true)], stored).isActiveAt(_now), isFalse);
     });
 
-    test('유예는 평생권·열린 구독(Android)에 영향을 주지 않는다', () {
-      expect(again([_e('l')], null).subscriptionGrace, isFalse);
-      final open = again([_e('y', openEnded: true)], null);
-      expect(open.subscriptionExpiry, isNull);
-      expect(open.subscriptionGrace, isFalse);
+    test('유예는 평생권·열린 구독(Android)에 만료일을 만들어 주지 않는다', () {
+      expect(again([_e('l')], null).subscriptionExpiry, isNull);
+      expect(again([_e('y', openEnded: true)], null).subscriptionExpiry, isNull);
     });
 
     test('저장 만료일이 없으면 만료된 구독은 그대로 비활성(유예를 지어내지 않는다)', () {
@@ -197,7 +213,8 @@ void main() {
     test('업그레이드로 대체된 옛 거래(isUpgraded)는 만료일이 남아 있어도 권리가 아니다', () {
       final exp = _now.add(const Duration(days: 20)).millisecondsSinceEpoch;
       final e = entitlementFromSk2(tx(json: '{"expiresDate":$exp,"isUpgraded":true}'));
-      expect(e.revoked, isTrue);
+      expect(e.superseded, isTrue);
+      expect(e.revoked, isFalse);
       expect(_derive([e]).isActiveAt(_now), isFalse);
     });
 

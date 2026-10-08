@@ -50,6 +50,7 @@ class StoreEntitlement {
     required this.productId,
     this.expiresAt,
     this.revoked = false,
+    this.superseded = false,
     this.openEnded = false,
   });
 
@@ -58,6 +59,10 @@ class StoreEntitlement {
 
   /// 환불·취소로 회수된 거래.
   final bool revoked;
+
+  /// 업그레이드로 더 새 거래에 대체된 옛 거래. 권리는 아니지만 환불·회수는 아니라서
+  /// 회수 증거로 치지 않는다.
+  final bool superseded;
 
   final bool openEnded;
 }
@@ -70,7 +75,9 @@ class StoreEntitlement {
 /// [storedExpiry]는 지금 저장된 구독 만료일이다. iOS의 Transaction.all은 로컬 캐시라
 /// 오프라인이면 옛 거래만 돌려줄 수 있으므로, 저장된 권리를 덮는 회수 증거가 없는 동안은
 /// 더 짧은 만료일로 내리지 않고 저장 만료일 뒤 [subscriptionGracePeriod]까지 활성으로 둔다.
-/// 회수 증거 = 회수된 평생권, 또는 만료일이 저장 만료일보다 이르지 않은 회수된 구독 거래.
+/// 회수 증거 = 회수된 평생권, 또는 저장 만료일을 만든 거래 자체의 회수(회수된 구독 거래의
+/// 만료일 == 저장 만료일). 다른 구독 계보의 옛 환불(예: 만료일이 더 먼 환불된 연간)은
+/// 지금 저장된 권리를 덮지 않으므로 증거가 아니다. 업그레이드로 대체된 거래도 증거가 아니다.
 PremiumEntitlement derivePremiumEntitlement(
   Iterable<StoreEntitlement> items, {
   required Map<String, String> productIds,
@@ -83,10 +90,11 @@ PremiumEntitlement derivePremiumEntitlement(
   var revokedCoversStored = false;
   for (final e in items) {
     final isSub = e.productId == productIds['monthly'] || e.productId == productIds['yearly'];
+    if (e.superseded) continue;
     if (e.revoked) {
       final until = e.expiresAt;
       if (e.productId == productIds['lifetime'] ||
-          (isSub && storedExpiry != null && until != null && !until.isBefore(storedExpiry))) {
+          (isSub && storedExpiry != null && until != null && until.isAtSameMomentAs(storedExpiry))) {
         revokedCoversStored = true;
       }
       continue;
@@ -103,32 +111,35 @@ PremiumEntitlement derivePremiumEntitlement(
     }
   }
   final stored = storedExpiry;
-  if (!revokedCoversStored && stored != null && stored.add(subscriptionGracePeriod).isAfter(now)) {
+  if (!revokedCoversStored &&
+      stored != null &&
+      PremiumEntitlement(hasLifetime: false, subscriptionExpiry: stored).isActiveAt(now)) {
     if (expiry == null || stored.isAfter(expiry)) expiry = stored;
   }
   return PremiumEntitlement(
     hasLifetime: lifetime,
     subscriptionExpiry: expiry,
     subscriptionOpenEnded: openEnded,
-    subscriptionGrace: expiry != null && !revokedCoversStored,
   );
 }
 
 /// StoreKit 2 거래 → [StoreEntitlement]. 날짜 문자열은 기기 로케일에 따라 달라져 믿을 수
 /// 없으므로, 스토어가 준 JSON(밀리초 epoch)만 읽는다. 만료일을 모르면 iOS에서는 권리 없음이다.
-/// 업그레이드로 대체된 옛 거래(isUpgraded)는 회수된 것과 같이 권리에서 뺀다.
+/// 업그레이드로 대체된 옛 거래(isUpgraded)는 권리에서 빼되 회수로 보지 않는다.
 StoreEntitlement entitlementFromSk2(SK2Transaction t) {
   DateTime? expiresAt;
   var revoked = false;
+  var superseded = false;
   try {
     final json = jsonDecode(t.jsonRepresentation ?? '');
     if (json is Map) {
       final exp = json['expiresDate'];
       if (exp is num) expiresAt = DateTime.fromMillisecondsSinceEpoch(exp.round());
-      revoked = json['revocationDate'] != null || json['isUpgraded'] == true;
+      revoked = json['revocationDate'] != null;
+      superseded = json['isUpgraded'] == true;
     }
   } catch (_) {}
-  return StoreEntitlement(productId: t.productId, expiresAt: expiresAt, revoked: revoked);
+  return StoreEntitlement(productId: t.productId, expiresAt: expiresAt, revoked: revoked, superseded: superseded);
 }
 
 /// 스토어에서 지금 유효한 권리를 읽어 온다. 실패는 예외로 알린다(빈 목록과 구분).
@@ -190,8 +201,10 @@ class InAppPurchaseService {
     this.snackBarService,
     DateTime Function()? clock,
     Duration retryDelay = const Duration(seconds: 2),
+    Future<List<StoreEntitlement>> Function()? fetch, // 테스트 주입점(iOS 조회는 네이티브 채널)
   })  : _clock = clock ?? DateTime.now,
-        _retryDelay = retryDelay {
+        _retryDelay = retryDelay,
+        _fetch = fetch ?? fetchStoreEntitlements {
     // 부팅 때부터 붙어 있어야 앱이 꺼진 사이 도착한 거래(갱신·대기 승인)를 받는다.
     _subscription = _inAppPurchase.purchaseStream.listen(
       _listenToPurchaseUpdated,
@@ -203,6 +216,7 @@ class InAppPurchaseService {
   final SnackBarService? snackBarService;
   final DateTime Function() _clock;
   final Duration _retryDelay;
+  final Future<List<StoreEntitlement>> Function() _fetch;
   static const _refreshRetries = 2;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   Future<void> _refreshQueue = Future.value();
@@ -220,12 +234,15 @@ class InAppPurchaseService {
 
   Future<PremiumEntitlement?> _refreshNow() async {
     try {
-      final items = await fetchStoreEntitlements();
+      final items = await _fetch();
       final entitlement = derivePremiumEntitlement(
         items,
         productIds: AppConfig().productIds,
         now: _clock(),
-        storedExpiry: settingsNotifier.storedSubscriptionExpiry,
+        // 저장 만료일 바닥값은 iOS 전용이다. Android는 만료일을 안 주고 회수된 항목도 안 돌려줘서
+        // 회수 증거가 생길 수 없고, 옛 버전이 기기에서 계산해 저장한 날짜가 남아 있을 수 있다.
+        storedExpiry:
+            defaultTargetPlatform == TargetPlatform.iOS ? settingsNotifier.storedSubscriptionExpiry : null,
       );
       await settingsNotifier.applyStoreEntitlement(entitlement);
       return entitlement;
