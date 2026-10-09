@@ -105,20 +105,6 @@ void main() {
     expect(find.text('SETTINGS'), findsOneWidget);
   });
 
-  testWidgets('N2 · 첫 실행(온보딩)이면 보류 딥링크를 버리고 온보딩을 건너뛰지 않는다', (tester) async {
-    AppFeatureConfig.isOnboardingEnabled = true;
-    PendingDeepLink.reset();
-    expect(PendingDeepLink.offer('/settings'), isNull);
-    final router = await _pump(tester, extraRoutes: [
-      GoRoute(
-          path: Routes.onboarding,
-          builder: (_, _) => const Scaffold(body: Text('ONBOARDING'))),
-    ]);
-    expect(find.text('ONBOARDING'), findsOneWidget);
-    expect(find.text('SETTINGS'), findsNothing);
-    expect(router.routerDelegate.currentConfiguration.uri.path, Routes.onboarding);
-  });
-
   testWidgets('동의가 필요하면 이동 전에 동의 시트를 띄운다 (이동하지 않는다)', (tester) async {
     AppFeatureConfig.isPrivacyConsentEnabled = true;
     await _pump(tester, overrides: [needsConsentProvider.overrideWithValue(true)]);

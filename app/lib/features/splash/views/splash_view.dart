@@ -203,24 +203,22 @@ class _SplashViewState extends ConsumerState<SplashView> {
     final whatsNew = AppFeatureConfig.isWhatsNewEnabled
         ? ref.read(whatsNewServiceProvider)
         : null;
-    final toOnboarding = _replaceWithNextScreen(settings);
+    _replaceWithNextScreen(settings);
 
     // 스플래시 이동이 끝났다 — 그 전에 도착한 딥링크(콜드 스타트 포함)를 이제 소비한다.
-    // 온보딩 중에는 버린다(첫 실행 흐름을 건너뛰면 안 된다). 잠금 화면이면 go가 /auth로
-    // 튕기며 목적지가 잠금 해제 뒤로 보관된다.
+    // 온보딩 전이거나 잠금 화면이면 라우터 redirect가 목적지를 보관한 채 그쪽으로 튕기고,
+    // 온보딩 완료·잠금 해제 뒤에 이어 연다.
     final pending = PendingDeepLink.markReady();
-    if (pending != null && !toOnboarding) context.go(pending);
+    if (pending != null) context.go(pending);
 
     // What's-new는 이동 뒤에 띄운다(스플래시 위에 띄우면 replace 때 사라진다).
     if (whatsNew != null) unawaited(_showWhatsNew(whatsNew));
   }
 
-  /// 온보딩으로 보냈으면 true.
-  bool _replaceWithNextScreen(Settings settings) {
+  void _replaceWithNextScreen(Settings settings) {
     // Check if onboarding feature is enabled and user hasn't completed onboarding
     if (AppFeatureConfig.isOnboardingEnabled && !settings.onBoard) {
       context.replace(Routes.onboarding);
-      return true;
     } else if (AppFeatureConfig.isAuthenticationEnabled &&
         settings.userAuthOption != UserAuthOption.none) {
       // 기존 '/authentication'은 등록되지 않은 죽은 경로였다 (실제 라우트는 /auth)
@@ -228,6 +226,5 @@ class _SplashViewState extends ConsumerState<SplashView> {
     } else {
       context.replace(Routes.home);
     }
-    return false;
   }
 }

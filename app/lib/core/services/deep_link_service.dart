@@ -87,8 +87,11 @@ class PendingDeepLink {
 
   static String? _afterUnlock;
 
-  /// 앱 잠금 때문에 `/auth`로 튕긴 원래 목적지를 잠금 해제 뒤까지 보관한다.
+  /// 앱 잠금·온보딩 때문에 튕긴 원래 목적지를 잠금 해제(또는 온보딩 완료) 뒤까지 보관한다.
   static void holdForUnlock(String location) => _afterUnlock = location;
+
+  /// 보관된 목적지를 꺼내지 않고 본다 (redirect의 "이미 인증됨" 분기용 — 꺼내는 곳은 한 곳뿐이다).
+  static String? peekAfterUnlock() => _afterUnlock;
 
   /// 잠금이 풀렸다. 보관된 목적지가 있으면 그곳, 없으면 [fallback].
   static String takeAfterUnlock(String fallback) {
@@ -96,9 +99,6 @@ class PendingDeepLink {
     _afterUnlock = null;
     return p;
   }
-
-  /// 첫 실행(온보딩) 등 원래 목적지를 이어 열면 안 될 때 버린다.
-  static void discardAfterUnlock() => _afterUnlock = null;
 
   /// 테스트 격리용.
   static void reset() {

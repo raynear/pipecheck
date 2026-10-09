@@ -86,10 +86,11 @@ void main() {
       expect(PendingDeepLink.takeAfterUnlock('/home'), '/home');
     });
 
-    test('discardAfterUnlock은 보류를 버린다', () {
+    test('peekAfterUnlock은 꺼내지 않고 본다', () {
+      expect(PendingDeepLink.peekAfterUnlock(), isNull);
       PendingDeepLink.holdForUnlock('/settings');
-      PendingDeepLink.discardAfterUnlock();
-      expect(PendingDeepLink.takeAfterUnlock('/home'), '/home');
+      expect(PendingDeepLink.peekAfterUnlock(), '/settings');
+      expect(PendingDeepLink.takeAfterUnlock('/home'), '/settings');
     });
   });
 }

@@ -104,6 +104,7 @@ void main() {
       AppFeatureConfig.applyBootConfig(profileName: 'minimal');
       saved = AppFeatureConfig.toMap();
       AppFeatureConfig.isAuthenticationEnabled = true;
+      AppFeatureConfig.isOnboardingEnabled = false; // 온보딩 분기는 N8 테스트만 켠다
     });
     tearDown(() => AppFeatureConfig.fromMap(saved));
 
@@ -200,6 +201,38 @@ void main() {
 
       expect(path(router), Routes.auth);
       expect(PendingDeepLink.takeAfterUnlock(Routes.home), '/settings?tab=2');
+      await teardownTree(tester);
+    });
+
+    testWidgets('N8: 온보딩 전에는 보호 라우트 대신 온보딩으로 보내고 목적지를 보관한다', (tester) async {
+      PendingDeepLink.reset();
+      addTearDown(PendingDeepLink.reset);
+      AppFeatureConfig.isOnboardingEnabled = true;
+      final container = makeContainer();
+      final router = await boot(tester, container);
+      await settleProtected(tester);
+      router.go('/settings?tab=2');
+      await settleProtected(tester);
+      expect(path(router), Routes.onboarding);
+      expect(PendingDeepLink.takeAfterUnlock(Routes.home), '/settings?tab=2');
+      await teardownTree(tester);
+    });
+
+    testWidgets('N8: 이미 인증된 채 /auth 로 오면 보관된 목적지로 보내되 꺼내지는 않는다(peek)', (tester) async {
+      PendingDeepLink.reset();
+      addTearDown(PendingDeepLink.reset);
+      final container = makeContainer();
+      final router = await boot(tester, container);
+      container
+          .read(authStateProvider.notifier)
+          .setAuthState(AuthState.authenticated(method: AuthMethod.pin));
+      await settleProtected(tester);
+      PendingDeepLink.holdForUnlock('/settings?tab=2');
+      router.go(Routes.auth);
+      await settleProtected(tester);
+      expect(path(router), Routes.settings);
+      expect(PendingDeepLink.takeAfterUnlock(Routes.home), '/settings?tab=2',
+          reason: 'redirect가 소비하면 안 된다');
       await teardownTree(tester);
     });
 

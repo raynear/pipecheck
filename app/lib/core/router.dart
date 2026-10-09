@@ -1,5 +1,6 @@
 import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:pipecheck/core/state/auth_state.dart';
+import 'package:pipecheck/core/state/settings.dart';
 import 'package:pipecheck/core/widgets/ads/ad_container.dart';
 import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:pipecheck/core/widgets/navigation/bottom_nav_bar.dart';
@@ -254,8 +255,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // 이미 인증된 사용자가 인증 화면에 접근하는 경우
+      // 보관된 목적지는 꺼내지 않고 본다 — 꺼내는 곳은 잠금 해제·PIN 복구 화면 한 곳이다.
       if (isAuthenticated && authRoutes.contains(currentPath)) {
-        return Routes.home;
+        return PendingDeepLink.peekAfterUnlock() ?? Routes.home;
+      }
+
+      // 온보딩 전에는 어떤 보호 라우트도 열지 않는다 — 콜드 링크가 늦게 와도 첫 실행 흐름을
+      // 건너뛰지 않게 목적지를 보관하고, 온보딩 완료 시 이어 연다.
+      if (AppFeatureConfig.isOnboardingEnabled &&
+          !ref.read(settingsProvider).onBoard &&
+          isProtectedRoute(currentPath)) {
+        PendingDeepLink.holdForUnlock(state.uri.toString());
+        return Routes.onboarding;
       }
 
       // 인증이 필요한 라우트 보호 (공개 목록 밖은 전부)
