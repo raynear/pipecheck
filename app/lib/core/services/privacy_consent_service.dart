@@ -33,8 +33,7 @@ class PrivacyConsent {
     return PrivacyConsent(
       analyticsConsent: analyticsConsent ?? this.analyticsConsent,
       adConsent: adConsent ?? this.adConsent,
-      crashReportingConsent:
-          crashReportingConsent ?? this.crashReportingConsent,
+      crashReportingConsent: crashReportingConsent ?? this.crashReportingConsent,
       consentVersion: consentVersion ?? this.consentVersion,
       consentDate: consentDate ?? this.consentDate,
     );
@@ -54,8 +53,8 @@ class PrivacyConsent {
     crashReportingConsent: json['crashReportingConsent'] as bool? ?? false,
     consentVersion: json['consentVersion'] as int? ?? 0,
     consentDate: json['consentDate'] != null
-        ? DateTime.tryParse(json['consentDate'] as String)
-        : null,
+      ? DateTime.tryParse(json['consentDate'] as String)
+      : null,
   );
 
   bool get hasConsented => consentVersion > 0;
@@ -92,17 +91,11 @@ class PrivacyConsentService {
 
   final ConsentApplier _apply;
 
-  /// 테스트가 "주입이 없으면 진짜 [applyToSdks]를 탄다"를 확인하는 자리.
-  ConsentApplier get applier => _apply;
-
   static const String _keyAnalytics = 'privacy_analytics_consent';
   static const String _keyAd = 'privacy_ad_consent';
   static const String _keyCrash = 'privacy_crash_consent';
   static const String _keyVersion = 'privacy_consent_version';
   static const String _keyDate = 'privacy_consent_date';
-
-  /// Load saved consent from storage
-  Future<PrivacyConsent> loadConsent() async => loadConsentSync();
 
   /// 저장된 동의를 동기로 읽는다 (Orange는 메모리 캐시를 동기로 읽는다).
   /// Notifier.build()가 첫 읽기부터 실제 값을 돌려주려면 동기여야 한다.
@@ -116,9 +109,7 @@ class PrivacyConsentService {
           adConsent: Orange.getBool(_keyAd) ?? false,
           crashReportingConsent: Orange.getBool(_keyCrash) ?? false,
           consentVersion: version,
-          consentDate: dateString != null
-              ? DateTime.tryParse(dateString)
-              : null,
+          consentDate: dateString != null ? DateTime.tryParse(dateString) : null,
         );
       }
     } catch (e) {
@@ -183,8 +174,7 @@ class PrivacyConsentService {
     try {
       final status = await AppTrackingTransparency.trackingAuthorizationStatus;
       if (status == TrackingStatus.notDetermined) {
-        final result =
-            await AppTrackingTransparency.requestTrackingAuthorization();
+        final result = await AppTrackingTransparency.requestTrackingAuthorization();
         return result == TrackingStatus.authorized;
       }
       return status == TrackingStatus.authorized;
@@ -197,8 +187,7 @@ class PrivacyConsentService {
   /// Check if consent needs to be (re)collected
   bool needsConsent(PrivacyConsent current) {
     if (!AppFeatureConfig.isPrivacyConsentEnabled) return false;
-    return !current.hasConsented ||
-        current.consentVersion < currentConsentVersion;
+    return !current.hasConsented || current.consentVersion < currentConsentVersion;
   }
 
   /// 광고 개인화 허용 여부 (동기 — 광고 로드 경로가 매 요청 시 호출).
@@ -237,8 +226,7 @@ class PrivacyConsentNotifier extends Notifier<PrivacyConsent> {
     final updated = state.copyWith(
       analyticsConsent: analyticsConsent ?? state.analyticsConsent,
       adConsent: adConsent ?? state.adConsent,
-      crashReportingConsent:
-          crashReportingConsent ?? state.crashReportingConsent,
+      crashReportingConsent: crashReportingConsent ?? state.crashReportingConsent,
       consentVersion: currentConsentVersion,
       consentDate: DateTime.now(),
     );
@@ -263,10 +251,9 @@ class PrivacyConsentNotifier extends Notifier<PrivacyConsent> {
   }
 }
 
-final privacyConsentProvider =
-    NotifierProvider<PrivacyConsentNotifier, PrivacyConsent>(
-      PrivacyConsentNotifier.new,
-    );
+final privacyConsentProvider = NotifierProvider<PrivacyConsentNotifier, PrivacyConsent>(
+  PrivacyConsentNotifier.new,
+);
 
 /// Whether consent dialog needs to be shown
 final needsConsentProvider = Provider<bool>((ref) {

@@ -1,4 +1,4 @@
-// 실행 횟수 증가가 메인 컨테이너의 상태에 반영되는지(주입) / 임시 컨테이너를 누수하지 않는지.
+// 실행 횟수 증가가 메인 컨테이너의 상태에 반영되는지(주입).
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,9 +27,5 @@ void main() {
     );
 
     expect(container.read(settingsProvider).appLaunchCount, before + 1);
-  });
-
-  test('주입하지 않아도 던지지 않는다 (임시 컨테이너는 dispose된다)', () async {
-    await AppConfig().incrementAppLaunchCountAndCheckForReview();
   });
 }

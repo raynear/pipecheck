@@ -402,22 +402,11 @@ class AppConfig {
   // 앱 실행 횟수 증가 및 리뷰 확인 (P1-14b: AppReviewService 통합 —
   // 세션 추적 + 재요청 간격 제한, 플래그로 제어 가능)
   ///
-  /// [settingsNotifier]: 앱 메인 컨테이너의 notifier. 주면 메인 상태에 증가분이 반영된다.
-  /// 생략하면 임시 컨테이너를 만들어 쓰고 dispose한다(호환용 — 메인 상태와 갈라지므로
-  /// 호출부가 주입하는 것이 맞다).
+  /// [settingsNotifier]: 앱 메인 컨테이너의 notifier — 증가분이 메인 상태에 반영된다.
   Future<void> incrementAppLaunchCountAndCheckForReview({
-    SettingsNotifier? settingsNotifier,
+    required SettingsNotifier settingsNotifier,
   }) async {
-    if (settingsNotifier != null) {
-      await settingsNotifier.incrementAppLaunchCount();
-    } else {
-      final container = ProviderContainer();
-      try {
-        await container.read(settingsProvider.notifier).incrementAppLaunchCount();
-      } finally {
-        container.dispose();
-      }
-    }
+    await settingsNotifier.incrementAppLaunchCount();
 
     if (!AppFeatureConfig.isAppReviewPromptEnabled) return;
 

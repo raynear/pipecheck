@@ -62,10 +62,9 @@ class DataExportService {
   /// (공유 시트가 끝난 뒤를 호출부가 알려 주지 않으므로, 사본이 임시 폴더에
   /// 쌓이지 않게 하는 지점이 여기다). 남는 건 가장 최근 1개뿐이다.
   Future<String> exportToFile({DateTime? timestamp}) async {
-    final stamp = (timestamp ?? DateTime.now()).toIso8601String().replaceAll(
-      RegExp(r'[:.]'),
-      '-',
-    );
+    final stamp = (timestamp ?? DateTime.now())
+        .toIso8601String()
+        .replaceAll(RegExp(r'[:.]'), '-');
     final json = await buildExportJson(exportedAt: timestamp);
     final dir = await getTemporaryDirectory();
     await _purgeStaleExports(dir);

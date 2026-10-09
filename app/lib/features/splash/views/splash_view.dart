@@ -55,13 +55,6 @@ class _SplashViewState extends ConsumerState<SplashView> {
   }
 
   @override
-  void dispose() {
-    // 스플래시가 이동 없이 사라졌다 — 이후 웜 링크가 영원히 보류되지 않게.
-    PendingDeepLink.markReady();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return KeyboardDismissOnTap(
       child: Scaffold(

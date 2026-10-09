@@ -255,13 +255,6 @@ void main() {
       );
       expect(sdk.setCrashCollectionEnabled, CrashReporter.setCollectionEnabled);
     });
-
-    test('주입이 없으면 서비스는 진짜 applyToSdks를 탄다', () {
-      expect(
-        PrivacyConsentService().applier,
-        PrivacyConsentService.applyToSdks,
-      );
-    });
   });
 
   group('동기 로드', () {
@@ -352,11 +345,11 @@ void main() {
       expect(c.copyWith(adConsent: true).adConsent, isTrue);
     });
 
-    test('loadConsent는 동기 로드와 같은 값을 돌려준다', () async {
+    test('saveConsent 뒤 동기 로드가 같은 값을 돌려준다', () async {
       await service().saveConsent(
         const PrivacyConsent(adConsent: true, consentVersion: 1),
       );
-      final loaded = await service().loadConsent();
+      final loaded = service().loadConsentSync();
       expect(loaded.adConsent, isTrue);
       expect(await service().requestTrackingAuthorization(), isTrue);
     });

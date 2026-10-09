@@ -55,15 +55,20 @@ abstract class AuthState with _$AuthState {
   const AuthState._();
 
   /// 인증되지 않은 초기 상태
-  factory AuthState.initial() =>
-      const AuthState(isAuthenticated: false, method: AuthMethod.none);
+  factory AuthState.initial() => const AuthState(
+        isAuthenticated: false,
+        method: AuthMethod.none,
+      );
 
   /// 인증 완료 상태 생성
-  factory AuthState.authenticated({required AuthMethod method}) => AuthState(
-    isAuthenticated: true,
-    method: method,
-    lastAuthTime: DateTime.now(),
-  );
+  factory AuthState.authenticated({
+    required AuthMethod method,
+  }) =>
+      AuthState(
+        isAuthenticated: true,
+        method: method,
+        lastAuthTime: DateTime.now(),
+      );
 }
 
 /// 백그라운드에서 돌아왔을 때 앱을 다시 잠그기까지의 유예 시간.
@@ -151,6 +156,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
           isAuthenticated: false,
           errorMessage: 'auth.biometricFailed'.tr(),
         );
+
       }
       return success;
     } catch (e) {
@@ -178,6 +184,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
           isAuthenticated: false,
           errorMessage: 'auth.pinFailed'.tr(),
         );
+
       }
       return success;
     } catch (e) {
@@ -229,10 +236,8 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// @return 삭제 성공 여부
   Future<bool> deleteAccount() async {
     if (!AppFeatureConfig.isAccountDeletionEnabled || !_firebaseAuthReady) {
-      logger.w(
-        'AuthState: Account deletion unavailable '
-        '(flag off or Firebase not initialized)',
-      );
+      logger.w('AuthState: Account deletion unavailable '
+          '(flag off or Firebase not initialized)');
       return false;
     }
 

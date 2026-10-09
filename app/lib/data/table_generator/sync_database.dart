@@ -21,12 +21,8 @@ void main() async {
   final packageName = _readPackageName();
 
   final driftDir = Directory('lib/data/generated/drift');
-  final databaseFile = File(
-    'lib/data/datasources/local/database/database.dart',
-  );
-  final driftDatabaseFile = File(
-    'lib/data/datasources/local/database/drift_database.dart',
-  );
+  final databaseFile = File('lib/data/datasources/local/database/database.dart');
+  final driftDatabaseFile = File('lib/data/datasources/local/database/drift_database.dart');
 
   if (!await driftDir.exists()) {
     stdout.writeln('⚠️  No generated drift files found');
@@ -61,9 +57,7 @@ void main() async {
     // 실제 클래스 이름 확인 (파일 내용에서)
     // Table classes may have $ prefix (e.g., $Sessions)
     final content = await file.readAsString();
-    final classMatch = RegExp(
-      r'class (\$?\w+) extends Table',
-    ).firstMatch(content);
+    final classMatch = RegExp(r'class (\$?\w+) extends Table').firstMatch(content);
 
     if (classMatch != null) {
       final actualClassName = classMatch.group(1)!;
@@ -75,19 +69,16 @@ void main() async {
       final registryKey = registryKeyFromDriftSource(content);
       if (registryKey == null) {
         stderr.writeln(
-          '  ⚠️  $actualClassName ($filename): tableName 리터럴을 찾지 못해 레지스트리 등록을 건너뜀',
-        );
+            '  ⚠️  $actualClassName ($filename): tableName 리터럴을 찾지 못해 레지스트리 등록을 건너뜀');
         continue;
       }
 
-      tables.add(
-        TableInfo(
-          fileName: filename,
-          className: actualClassName,
-          tableName: registryKey,
-          importPath: importPath,
-        ),
-      );
+      tables.add(TableInfo(
+        fileName: filename,
+        className: actualClassName,
+        tableName: registryKey,
+        importPath: importPath,
+      ));
 
       stdout.writeln('  ✓ $actualClassName ($filename) → $registryKey');
     }
@@ -107,14 +98,11 @@ void main() async {
   final validImportPaths = tables.map((t) => t.importPath).toSet();
 
   // 2-1. 더 이상 존재하지 않는 import 제거
-  final driftImportPattern = RegExp(
-    "import 'package:$packageName/data/generated/drift/([^']+\\.drift\\.dart)';\\n",
-  );
+  final driftImportPattern = RegExp("import 'package:$packageName/data/generated/drift/([^']+\\.drift\\.dart)';\\n");
   final existingImports = driftImportPattern.allMatches(content).toList();
 
   for (final match in existingImports.reversed) {
-    final importPath =
-        'package:$packageName/data/generated/drift/${match.group(1)}';
+    final importPath = 'package:$packageName/data/generated/drift/${match.group(1)}';
     if (!validImportPaths.contains(importPath)) {
       content = content.replaceFirst(match.group(0)!, '');
       modified = true;
@@ -123,11 +111,7 @@ void main() async {
   }
 
   // 2-2. @DriftDatabase tables 목록 정리 (삭제된 테이블 제거 + 새 테이블 추가)
-  final tablesPattern = RegExp(
-    r'(@DriftDatabase\s*\(\s*tables:\s*\[)([^\]]*)\]',
-    multiLine: true,
-    dotAll: true,
-  );
+  final tablesPattern = RegExp(r'(@DriftDatabase\s*\(\s*tables:\s*\[)([^\]]*)\]', multiLine: true, dotAll: true);
   final tablesMatch = tablesPattern.firstMatch(content);
 
   if (tablesMatch != null) {
@@ -142,18 +126,14 @@ void main() async {
         .toList();
 
     // 삭제된 테이블 제거
-    final removedTables = tableList
-        .where((t) => !validTableNames.contains(t))
-        .toList();
+    final removedTables = tableList.where((t) => !validTableNames.contains(t)).toList();
     for (final removed in removedTables) {
       stdout.writeln('  ➖ Removed table: $removed');
       modified = true;
     }
 
     // 유효한 테이블만 유지 + 새 테이블 추가
-    final updatedList = tableList
-        .where((t) => validTableNames.contains(t))
-        .toList();
+    final updatedList = tableList.where((t) => validTableNames.contains(t)).toList();
     for (final table in tables) {
       if (!updatedList.contains(table.className)) {
         updatedList.add(table.className);
@@ -164,8 +144,7 @@ void main() async {
 
     // 정렬 및 업데이트
     updatedList.sort();
-    final newTables =
-        '\n    // Active tables with definitions in lib/data/definitions/\n    ${updatedList.join(',\n    ')},\n  ';
+    final newTables = '\n    // Active tables with definitions in lib/data/definitions/\n    ${updatedList.join(',\n    ')},\n  ';
     content = content.replaceFirst(tablesPattern, '$prefix$newTables]');
   }
 
@@ -173,16 +152,11 @@ void main() async {
   for (final table in tables) {
     if (!content.contains(table.importPath)) {
       // import 섹션 찾기 - drift import 뒤에 추가
-      final importPattern = RegExp(
-        "(import 'package:$packageName/data/generated/drift/[^']+\\.dart';\\n)",
-      );
+      final importPattern = RegExp("(import 'package:$packageName/data/generated/drift/[^']+\\.dart';\\n)");
       final match = importPattern.firstMatch(content);
 
       if (match != null) {
-        content = content.replaceFirst(
-          match.group(0)!,
-          "${match.group(0)}import '${table.importPath}';\n",
-        );
+        content = content.replaceFirst(match.group(0)!, "${match.group(0)}import '${table.importPath}';\n");
         modified = true;
         stdout.writeln('  ➕ Added import: ${table.className}');
       }
@@ -209,10 +183,7 @@ void main() async {
 }
 
 /// drift_database.dart의 _tableRegistry를 업데이트 (추가 및 삭제)
-Future<void> _syncDriftDatabase(
-  File driftDatabaseFile,
-  List<TableInfo> tables,
-) async {
+Future<void> _syncDriftDatabase(File driftDatabaseFile, List<TableInfo> tables) async {
   if (!await driftDatabaseFile.exists()) {
     stderr.writeln('⚠️  drift_database.dart not found, skipping registry sync');
     return;
@@ -250,9 +221,7 @@ Future<void> _syncDriftDatabase(
   final validTableNames = tables.map((t) => t.tableName).toSet();
 
   // 삭제된 테이블 제거
-  final removedEntries = existingEntries.keys
-      .where((k) => !validTableNames.contains(k))
-      .toList();
+  final removedEntries = existingEntries.keys.where((k) => !validTableNames.contains(k)).toList();
   for (final removed in removedEntries) {
     existingEntries.remove(removed);
     stdout.writeln('  ➖ Removed registry: $removed');
@@ -274,11 +243,10 @@ Future<void> _syncDriftDatabase(
 
   if (modified) {
     // 엔트리 목록 생성 및 정렬
-    final allEntries =
-        existingEntries.entries
-            .map((e) => "'${e.key}': _db.${e.value}")
-            .toList()
-          ..sort();
+    final allEntries = existingEntries.entries
+        .map((e) => "'${e.key}': _db.${e.value}")
+        .toList()
+      ..sort();
 
     final newRegistry = '\n      ${allEntries.join(',\n      ')},\n    ';
     content = content.replaceFirst(registryPattern, '$prefix$newRegistry}');
@@ -294,15 +262,11 @@ Future<void> _syncDriftDatabase(
 String _readPackageName() {
   final pubspec = File('pubspec.yaml');
   if (!pubspec.existsSync()) {
-    stderr.writeln(
-      '⚠️  pubspec.yaml not found — package name fallback: boilerplate',
-    );
+    stderr.writeln('⚠️  pubspec.yaml not found — package name fallback: boilerplate');
     return 'boilerplate';
   }
-  final match = RegExp(
-    r'^name:\s*(\S+)',
-    multiLine: true,
-  ).firstMatch(pubspec.readAsStringSync());
+  final match = RegExp(r'^name:\s*(\S+)', multiLine: true)
+      .firstMatch(pubspec.readAsStringSync());
   return match?.group(1) ?? 'boilerplate';
 }
 
