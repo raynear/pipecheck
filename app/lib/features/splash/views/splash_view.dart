@@ -1,11 +1,17 @@
-import 'package:ads/ads.dart';
+import 'dart:async';
+
 import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:pipecheck/core/router.dart';
+import 'package:pipecheck/core/services/deep_link_service.dart';
+import 'package:pipecheck/core/services/force_update_service.dart';
+import 'package:pipecheck/core/services/maintenance_service.dart';
 import 'package:pipecheck/core/services/privacy_consent_service.dart';
+import 'package:pipecheck/core/services/startup_ad.dart';
+import 'package:pipecheck/core/services/whats_new_service.dart';
 import 'package:pipecheck/core/state/settings.dart';
 import 'package:pipecheck/core/widgets/dialogs/privacy_consent_dialog.dart';
+import 'package:pipecheck/core/widgets/dialogs/whats_new_dialog.dart';
 import 'package:collection/collection.dart';
-import 'package:firebase_services/firebase_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
@@ -14,7 +20,21 @@ import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 
 class SplashView extends ConsumerStatefulWidget {
-  const SplashView({super.key});
+  const SplashView({
+    super.key,
+    this.isUnderMaintenance = MaintenanceService.isUnderMaintenance,
+    this.checkForUpdate = ForceUpdateService.checkForUpdate,
+    this.showStartupAd = showSplashAd,
+  });
+
+  /// 점검 모드 판정 (테스트에서 대체).
+  final bool Function() isUnderMaintenance;
+
+  /// 강제 업데이트 판정 (테스트에서 대체).
+  final Future<UpdateStatus> Function() checkForUpdate;
+
+  /// 시작 광고 표시 (테스트에서 대체). 광고를 보여 줬으면 true — 이동은 [onDone]이 맡는다.
+  final Future<bool> Function({required VoidCallback onDone}) showStartupAd;
 
   @override
   ConsumerState<SplashView> createState() => _SplashViewState();
@@ -26,18 +46,12 @@ class _SplashViewState extends ConsumerState<SplashView> {
   @override
   void initState() {
     super.initState();
-    FirebaseService.logScreenView(screenName: 'SplashView');
     _keyboardVisibilityController = KeyboardVisibilityController();
     if (_keyboardVisibilityController.isVisible) {
       // 키보드가 보이면 숨깁니다.
       FocusScope.of(context).unfocus();
     }
     asyncNavigationCallback();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   @override
@@ -114,6 +128,12 @@ class _SplashViewState extends ConsumerState<SplashView> {
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
+    // 점검 모드·강제 업데이트는 이동 **전에** 검사한다. 스플래시 위에 pageless 다이얼로그를
+    // 띄워 두면 아래 context.replace가 그 다이얼로그까지 제거해 킬스위치가 무력화된다.
+    // 차단되면 이동하지 않는다(다이얼로그는 닫히지 않는다).
+    if (await _blockedByRemoteGate()) return;
+    if (!mounted) return;
+
     // ATT 요청 (iOS only, 광고 또는 분석 기능 사용 시)
     if (AppFeatureConfig.isPrivacyConsentEnabled) {
       final consentService = ref.read(privacyConsentServiceProvider);
@@ -135,57 +155,60 @@ class _SplashViewState extends ConsumerState<SplashView> {
         !settings.isSubscriptionActive;
 
     if (shouldShowAd) {
-      // 1순위: 앱 오프닝 광고 (isAppOpenAdEnabled가 활성화된 경우)
-      if (AppFeatureConfig.isAppOpenAdEnabled) {
-        final adReady = await AdService().waitForAppOpenAd(
-          timeout: const Duration(seconds: 5),
-        );
-
-        if (adReady && mounted) {
-          await AdService().showAppOpenAd(
-            onAdDismissed: () {
-              if (mounted) {
-                _navigateToNextScreen(settings);
-              }
-            },
-            onAdFailed: () {
-              if (mounted) {
-                _navigateToNextScreen(settings);
-              }
-            },
-          );
-          return; // 콜백에서 네비게이션 처리
-        }
-      }
-      // 2순위: 스플래시 전면광고 (isSplashInterstitialAdEnabled가 활성화된 경우)
-      else if (AppFeatureConfig.isSplashInterstitialAdEnabled) {
-        final adReady = await AdService().waitForInterstitialAd(
-          timeout: const Duration(seconds: 5),
-        );
-
-        if (adReady && mounted) {
-          await AdService().showInterstitialAdWithCallback(
-            onAdDismissed: () {
-              if (mounted) {
-                _navigateToNextScreen(settings);
-              }
-            },
-            onAdFailed: () {
-              if (mounted) {
-                _navigateToNextScreen(settings);
-              }
-            },
-          );
-          return; // 콜백에서 네비게이션 처리
-        }
-      }
+      final shown = await widget.showStartupAd(onDone: () {
+        if (mounted) _navigateToNextScreen(settings);
+      });
+      if (shown) return; // 콜백에서 네비게이션 처리
     }
 
     // 광고를 표시하지 않거나 로드 실패 시 바로 네비게이션
     _navigateToNextScreen(settings);
   }
 
+  /// 점검 중이거나 강제 업데이트가 필요하면 차단 화면을 띄우고 true.
+  /// RC 미초기화/네트워크 실패는 서비스가 fail-open이다.
+  Future<bool> _blockedByRemoteGate() async {
+    if (widget.isUnderMaintenance()) {
+      await MaintenanceService.showMaintenanceScreen(context);
+      return true;
+    }
+    if (AppFeatureConfig.isForceUpdateEnabled) {
+      final status = await widget.checkForUpdate();
+      if (!mounted) return true;
+      if (status == UpdateStatus.updateRequired) {
+        await ForceUpdateService.showForceUpdateDialog(context);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// What's-new 다이얼로그 (P2-24) — 마이너 이상 버전 업 후 첫 실행에 1회.
+  Future<void> _showWhatsNew(WhatsNewService whatsNew) async {
+    final show = await whatsNew.shouldShow();
+    await whatsNew.markSeen();
+    if (!show) return;
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx != null && ctx.mounted) await WhatsNewDialog.show(ctx);
+  }
+
   void _navigateToNextScreen(Settings settings) {
+    final whatsNew = AppFeatureConfig.isWhatsNewEnabled
+        ? ref.read(whatsNewServiceProvider)
+        : null;
+    _replaceWithNextScreen(settings);
+
+    // 스플래시 이동이 끝났다 — 그 전에 도착한 딥링크(콜드 스타트 포함)를 이제 소비한다.
+    // 온보딩 전이거나 잠금 화면이면 라우터 redirect가 목적지를 보관한 채 그쪽으로 튕기고,
+    // 온보딩 완료·잠금 해제 뒤에 이어 연다.
+    final pending = PendingDeepLink.markReady();
+    if (pending != null) context.go(pending);
+
+    // What's-new는 이동 뒤에 띄운다(스플래시 위에 띄우면 replace 때 사라진다).
+    if (whatsNew != null) unawaited(_showWhatsNew(whatsNew));
+  }
+
+  void _replaceWithNextScreen(Settings settings) {
     // Check if onboarding feature is enabled and user hasn't completed onboarding
     if (AppFeatureConfig.isOnboardingEnabled && !settings.onBoard) {
       context.replace(Routes.onboarding);

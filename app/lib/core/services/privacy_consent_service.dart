@@ -63,16 +63,43 @@ class PrivacyConsent {
 /// Current consent version - increment when terms change
 const int currentConsentVersion = 1;
 
+/// 저장된 동의를 SDK(분석·ad_storage·Crashlytics)에 적용하는 함수. 테스트에서 대체한다.
+typedef ConsentApplier = Future<void> Function(PrivacyConsent consent);
+
+/// 동의를 넘겨받는 SDK 3종 호출. 기본값은 실제 Firebase 호출이다.
+class ConsentSdk {
+  const ConsentSdk({
+    this.setConsent = FirebaseService.setConsent,
+    this.setAnalyticsCollectionEnabled =
+        FirebaseService.setAnalyticsCollectionEnabled,
+    this.setCrashCollectionEnabled = CrashReporter.setCollectionEnabled,
+  });
+
+  final Future<void> Function({
+    required bool analyticsStorageConsentGranted,
+    required bool adStorageConsentGranted,
+  })
+  setConsent;
+  final Future<void> Function(bool enabled) setAnalyticsCollectionEnabled;
+  final Future<void> Function(bool enabled) setCrashCollectionEnabled;
+}
+
 /// Service to manage user privacy consent
 class PrivacyConsentService {
+  PrivacyConsentService({ConsentApplier? applier})
+    : _apply = applier ?? applyToSdks;
+
+  final ConsentApplier _apply;
+
   static const String _keyAnalytics = 'privacy_analytics_consent';
   static const String _keyAd = 'privacy_ad_consent';
   static const String _keyCrash = 'privacy_crash_consent';
   static const String _keyVersion = 'privacy_consent_version';
   static const String _keyDate = 'privacy_consent_date';
 
-  /// Load saved consent from storage
-  Future<PrivacyConsent> loadConsent() async {
+  /// 저장된 동의를 동기로 읽는다 (Orange는 메모리 캐시를 동기로 읽는다).
+  /// Notifier.build()가 첫 읽기부터 실제 값을 돌려주려면 동기여야 한다.
+  PrivacyConsent loadConsentSync() {
     try {
       final version = Orange.getInt(_keyVersion);
       if (version != null) {
@@ -101,21 +128,43 @@ class PrivacyConsentService {
       if (consent.consentDate != null) {
         Orange.setString(_keyDate, consent.consentDate!.toIso8601String());
       }
-      await _applyConsent(consent);
+      await _apply(consent);
       logger.d('PrivacyConsent: saved and applied');
     } catch (e) {
       logger.e('PrivacyConsent: failed to save: $e');
     }
   }
 
-  /// Apply consent settings to Firebase and other services
-  Future<void> _applyConsent(PrivacyConsent consent) async {
+  /// 부팅 시 저장된 동의를 SDK에 적용한다.
+  ///
+  /// 동의 기능이 꺼진 앱은 동의 UI가 없으므로 전부 허용(기존 동작).
+  /// 켜져 있으면 저장값을 따르고, 아직 동의하지 않았다면 전부 거부 상태다.
+  Future<void> applyStoredConsent() async {
+    final consent = AppFeatureConfig.isPrivacyConsentEnabled
+        ? loadConsentSync()
+        : const PrivacyConsent(
+            analyticsConsent: true,
+            adConsent: true,
+            crashReportingConsent: true,
+          );
+    await _apply(consent);
+  }
+
+  /// Apply consent settings to Firebase and other services.
+  ///
+  /// 네이티브 수집 기본은 OFF라 이 함수가 Analytics·Crashlytics를 켜는 유일한 경로다.
+  /// [sdk]는 테스트가 SDK 호출을 기록하려고 갈아끼우는 자리다.
+  static Future<void> applyToSdks(
+    PrivacyConsent consent, {
+    ConsentSdk sdk = const ConsentSdk(),
+  }) async {
     // 플래그·초기화 가드는 FirebaseService가 담당한다 (firebase_services 패키지).
-    await FirebaseService.setConsent(
+    await sdk.setConsent(
       analyticsStorageConsentGranted: consent.analyticsConsent,
       adStorageConsentGranted: consent.adConsent,
     );
-    await FirebaseService.setAnalyticsCollectionEnabled(consent.analyticsConsent);
+    await sdk.setAnalyticsCollectionEnabled(consent.analyticsConsent);
+    await sdk.setCrashCollectionEnabled(consent.crashReportingConsent);
   }
 
   /// Request ATT permission (iOS only)
@@ -166,16 +215,8 @@ final privacyConsentServiceProvider = Provider<PrivacyConsentService>((ref) {
 /// Privacy consent state provider
 class PrivacyConsentNotifier extends Notifier<PrivacyConsent> {
   @override
-  PrivacyConsent build() {
-    _loadSaved();
-    return const PrivacyConsent();
-  }
-
-  Future<void> _loadSaved() async {
-    final service = ref.read(privacyConsentServiceProvider);
-    final saved = await service.loadConsent();
-    state = saved;
-  }
+  PrivacyConsent build() =>
+      ref.read(privacyConsentServiceProvider).loadConsentSync();
 
   Future<void> updateConsent({
     bool? analyticsConsent,

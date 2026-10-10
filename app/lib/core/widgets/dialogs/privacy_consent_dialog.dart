@@ -19,13 +19,24 @@ class PrivacyConsentDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<PrivacyConsentDialog> createState() => _PrivacyConsentDialogState();
+  ConsumerState<PrivacyConsentDialog> createState() =>
+      _PrivacyConsentDialogState();
 }
 
 class _PrivacyConsentDialogState extends ConsumerState<PrivacyConsentDialog> {
-  bool _analytics = false;
-  bool _ads = false;
-  bool _crash = false;
+  late bool _analytics;
+  late bool _ads;
+  late bool _crash;
+
+  @override
+  void initState() {
+    super.initState();
+    // 기존 동의가 있으면 그 값에서 시작한다 (철회를 실수로 저장하지 않도록).
+    final current = ref.read(privacyConsentProvider);
+    _analytics = current.analyticsConsent;
+    _ads = current.adConsent;
+    _crash = current.crashReportingConsent;
+  }
 
   void _setAll(bool value) {
     setState(() {
@@ -36,11 +47,13 @@ class _PrivacyConsentDialogState extends ConsumerState<PrivacyConsentDialog> {
   }
 
   Future<void> _save() async {
-    await ref.read(privacyConsentProvider.notifier).updateConsent(
-      analyticsConsent: _analytics,
-      adConsent: _ads,
-      crashReportingConsent: _crash,
-    );
+    await ref
+        .read(privacyConsentProvider.notifier)
+        .updateConsent(
+          analyticsConsent: _analytics,
+          adConsent: _ads,
+          crashReportingConsent: _crash,
+        );
     if (mounted) {
       Navigator.of(context).pop();
     }
@@ -55,7 +68,8 @@ class _PrivacyConsentDialogState extends ConsumerState<PrivacyConsentDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SText('privacy_consent.title',
+            SText(
+              'privacy_consent.title',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
@@ -134,17 +148,11 @@ class _ConsentItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: Theme.of(context).textTheme.titleSmall),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(description, style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-          ),
+          Switch.adaptive(value: value, onChanged: onChanged),
         ],
       ),
     );

@@ -7,14 +7,11 @@ import 'package:pipecheck/core/error_handler.dart';
 import 'package:pipecheck/core/router.dart';
 import 'package:pipecheck/core/services/badge_service.dart';
 import 'package:pipecheck/core/services/deep_link_service.dart';
-import 'package:pipecheck/core/services/force_update_service.dart';
 import 'package:pipecheck/core/services/in_app_purchase_service.dart';
-import 'package:pipecheck/core/services/maintenance_service.dart';
 import 'package:pipecheck/core/services/notification/notification.dart';
 import 'package:pipecheck/core/services/snackbar_service.dart';
-import 'package:pipecheck/core/services/whats_new_service.dart';
+import 'package:pipecheck/core/state/auth_state.dart';
 import 'package:pipecheck/core/state/settings.dart';
-import 'package:pipecheck/core/widgets/dialogs/whats_new_dialog.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_services/firebase_services.dart';
 import 'package:flutter/foundation.dart';
@@ -35,8 +32,8 @@ void main() async {
 
   // 알림 탭 → 라우트 이동 핸들러를 notifications 패키지에 주입 (P2-20c PR3).
   // 패키지는 앱 라우터(rootNavigatorKey/go_router)에 의존하지 않는다.
-  NotificationController.onNavigate =
-      (route) => rootNavigatorKey.currentContext?.go(route);
+  NotificationController.onNavigate = (route) =>
+      navigateFromNotification(route, (r) => rootNavigatorKey.currentContext?.go(r));
 
   final appConfig = await AppConfig().initialize();
   // 개발 프리미엄 덮어쓰기는 디버그 또는 `-dev` 내부 배포 빌드에서만 인정한다.
@@ -72,6 +69,45 @@ void main() async {
           useFallbackTranslations: true,
           startLocale: startLocale,
           child: const MainApp())));
+}
+
+/// `app_start`를 부팅 동의 적용이 끝난 **뒤에** 보낸다 — 먼저 보내면 거부한 사용자의
+/// 이벤트가 나가거나 유실된다.
+@visibleForTesting
+Future<void> sendAppStartAfterConsent({
+  required Future<void> consentApplied,
+  required void Function() log,
+}) => consentApplied.then((_) => log());
+
+/// 딥링크·알림 탭 목적지를 **지금 이동할 위치**로 바꾼다. 스플래시 이동 전(콜드 스타트
+/// 포함)이면 보관하고 null — 지금 `go()`하면 동의·ATT·점검·온보딩을 건너뛴다.
+@visibleForTesting
+String? deepLinkTarget(String location) => PendingDeepLink.offer(location);
+
+/// 알림 탭 → 이동. 콜드 스타트 탭은 스플래시가 끝날 때까지 보관한다(점검·동의·온보딩 우회 방지).
+@visibleForTesting
+void navigateFromNotification(String route, void Function(String) go) {
+  final target = deepLinkTarget(route);
+  if (target != null) go(target);
+}
+
+/// 딥링크 URI → 이동. 화이트리스트 밖/가비지 링크는 무시하고, 나머지는 [deepLinkTarget]을 거친다.
+@visibleForTesting
+void navigateFromDeepLink(Uri uri, void Function(String) go) {
+  final location = deepLinkLocation(uri);
+  if (location == null) {
+    logger.d('DeepLink ignored (not routable): $uri');
+    return;
+  }
+  navigateFromNotification(location, go);
+}
+
+/// 생명주기 → 앱 잠금 배선. 백그라운드로 가면 시각을 기록하고(paused),
+/// 돌아오면(resumed) 유예 시간을 넘겼는지 보고 다시 잠근다.
+@visibleForTesting
+void applyLockLifecycle(AppLifecycleState state, AuthStateNotifier auth) {
+  if (state == AppLifecycleState.paused) auth.markBackgrounded();
+  if (state == AppLifecycleState.resumed) auth.relockIfBackgroundedLongerThan();
 }
 
 /// 애플리케이션의 루트 위젯입니다.
@@ -125,54 +161,28 @@ class MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
 
     // Firebase Analytics 초기화 확인 로깅 추가 (Firebase가 활성화된 경우에만)
     if (AppFeatureConfig.isFirebaseEnabled && AppFeatureConfig.isFirebaseAnalyticsEnabled) {
-      FirebaseService.logEvent(name: 'app_start', parameters: {'timestamp': DateTime.now().toIso8601String()});
+      // 부팅 동의 적용 뒤에 보낸다 — 네이티브 수집 기본이 OFF라 먼저 보내면 유실된다.
+      sendAppStartAfterConsent(
+        consentApplied: AppConfig.consentApplied,
+        log: () => FirebaseService.logEvent(
+            name: 'app_start', parameters: {'timestamp': DateTime.now().toIso8601String()}),
+      );
     }
 
     // 앱 실행 횟수 증가
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // 점검 모드 검사 (P2-23b) — RC maintenance_mode가 켜져 있으면 앱 전체를
-      // 차단하고 이후 검사(업데이트 등)는 건너뛴다. 플래그/RC 없으면 no-op.
-      if (MaintenanceService.isUnderMaintenance()) {
-        final maintenanceContext = rootNavigatorKey.currentContext;
-        if (maintenanceContext != null && maintenanceContext.mounted) {
-          await MaintenanceService.showMaintenanceScreen(maintenanceContext);
-        }
-        return;
-      }
-
-      await AppConfig().incrementAppLaunchCountAndCheckForReview();
+      // 점검 모드·강제 업데이트 검사는 SplashView가 이동 전에 한다 — 여기서 스플래시 위에
+      // pageless 다이얼로그를 띄우면 스플래시가 replace될 때 함께 제거돼 우회된다.
+      await AppConfig().incrementAppLaunchCountAndCheckForReview(
+        settingsNotifier: ref.read(settingsProvider.notifier),
+      );
       // 첫 실행 시에는 스플래시 화면이므로 여기서는 뱃지 확인하지 않음
-
-      // 강제 업데이트 검사 (P1-14b) — RC 미초기화/네트워크 실패는 fail-open
-      if (AppFeatureConfig.isForceUpdateEnabled) {
-        final status = await ForceUpdateService.checkForUpdate();
-        if (status == UpdateStatus.updateRequired) {
-          final navigatorContext = rootNavigatorKey.currentContext;
-          if (navigatorContext != null && navigatorContext.mounted) {
-            await ForceUpdateService.showForceUpdateDialog(navigatorContext);
-          }
-        }
-      }
 
       // 딥링크 수신 시작 (P2-23a) — 첫 프레임 이후라 라우터 컨텍스트가 준비됨.
       // 콜드 스타트 링크는 start() 안에서 getInitialLink로 비워진다.
       if (AppFeatureConfig.isDeepLinkEnabled) {
         _deepLink = DeepLinkService(onUri: _handleDeepLink);
         await _deepLink!.start();
-      }
-
-      // What's-new 다이얼로그 (P2-24) — 마이너 이상 버전 업 후 첫 실행에 1회.
-      // 로컬 버전 비교라 firebase/RC 무관. 점검/강제업데이트 뒤에 둔다.
-      if (AppFeatureConfig.isWhatsNewEnabled) {
-        final whatsNew = ref.read(whatsNewServiceProvider);
-        final showWhatsNew = await whatsNew.shouldShow();
-        await whatsNew.markSeen();
-        if (showWhatsNew) {
-          final whatsNewContext = rootNavigatorKey.currentContext;
-          if (whatsNewContext != null && whatsNewContext.mounted) {
-            await WhatsNewDialog.show(whatsNewContext);
-          }
-        }
       }
     });
 
@@ -198,16 +208,11 @@ class MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
   /// 들어온 딥링크 URI를 GoRouter 위치로 변환해 이동한다 (P2-23a).
   /// 화이트리스트 밖/가비지 링크는 [deepLinkLocation]이 null을 돌려 무시된다.
   void _handleDeepLink(Uri uri) {
-    final location = deepLinkLocation(uri);
-    if (location == null) {
-      logger.d('DeepLink ignored (not routable): $uri');
-      return;
-    }
     // 위젯 트리가 살아있을 때만 이동 — 티어다운 중 도착한 웜 링크가
     // 죽은 context로 go()해 예외가 나는 것을 막는다.
     final context = rootNavigatorKey.currentContext;
     if (context == null || !context.mounted) return;
-    context.go(location);
+    navigateFromDeepLink(uri, context.go);
   }
 
   /// 위젯이 제거될 때 호출됩니다.
@@ -256,6 +261,9 @@ class MainAppState extends ConsumerState<MainApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
+    // 앱 잠금: 떠난 시각 기록(paused) / 유예 초과 시 재잠금(resumed). 라우터가 authState를
+    // 듣고 있어 보호 화면에서는 즉시 /auth로 간다.
+    applyLockLifecycle(state, ref.read(authStateProvider.notifier));
 
     if (state == AppLifecycleState.inactive) {
       logger.i('inactive');

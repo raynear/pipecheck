@@ -4,39 +4,61 @@ import 'package:flutter/material.dart';
 abstract class DesignSystem {
   /// 디자인 시스템의 이름
   String get name;
-  
+
   /// 디자인 시스템의 설명
   String get description;
-  
+
   /// 색상 시스템
   DesignColors get colors;
-  
+
   /// 간격 시스템
   DesignSpacing get spacing;
-  
+
   /// 타이포그래피 시스템
   DesignTypography get typography;
-  
+
   /// 라이트 테마
   ThemeData get lightTheme;
-  
+
   /// 다크 테마
   ThemeData get darkTheme;
-  
+
   /// 현재 테마가 다크 모드인지 확인
   bool isDark(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark;
   }
-  
+
   /// 테마 색상 접근 헬퍼
   ColorScheme colorScheme(BuildContext context) {
     return Theme.of(context).colorScheme;
   }
-  
+
   /// 테마 텍스트 스타일 접근 헬퍼
   TextTheme textTheme(BuildContext context) {
     return Theme.of(context).textTheme;
   }
+}
+
+/// 현재 디자인 시스템을 [ThemeData]에 실어 나르는 확장.
+///
+/// `context.design`이 이걸 읽으면 테마가 바뀔 때(= 디자인 시스템 교체) 의존한 위젯이
+/// 다시 그려진다. 앱의 `themeProvider`가 모든 테마에 붙인다.
+@immutable
+class DesignSystemExtension extends ThemeExtension<DesignSystemExtension> {
+  const DesignSystemExtension(this.design);
+
+  final DesignSystem design;
+
+  @override
+  DesignSystemExtension copyWith({DesignSystem? design}) =>
+      DesignSystemExtension(design ?? this.design);
+
+  // 디자인 시스템은 보간할 수 없다 — 테마 전환 애니메이션의 중간에서 갈아 끼운다.
+  @override
+  DesignSystemExtension lerp(
+    ThemeExtension<DesignSystemExtension>? other,
+    double t,
+  ) => other is DesignSystemExtension && t >= 0.5 ? other : this;
 }
 
 /// 색상 시스템 인터페이스
@@ -48,7 +70,7 @@ abstract class DesignColors {
   Color get secondary;
   Color get secondaryLight;
   Color get secondaryDark;
-  
+
   // Semantic Colors
   Color get success;
   Color get successLight;
@@ -62,7 +84,7 @@ abstract class DesignColors {
   Color get info;
   Color get infoLight;
   Color get infoDark;
-  
+
   // Neutral Colors
   Color get white;
   Color get black;
@@ -76,14 +98,14 @@ abstract class DesignColors {
   Color get gray700;
   Color get gray800;
   Color get gray900;
-  
+
   // Background Colors
   Color get backgroundPrimary;
   Color get backgroundSecondary;
   Color get backgroundTertiary;
   Color get backgroundElevated;
   Color get backgroundOverlay;
-  
+
   // Text Colors
   Color get textPrimary;
   Color get textSecondary;
@@ -92,17 +114,17 @@ abstract class DesignColors {
   Color get textOnPrimary;
   Color get textOnSecondary;
   Color get textOnError;
-  
+
   // Border Colors
   Color get border;
   Color get borderLight;
   Color get borderDark;
-  
+
   // Special Colors
   Color get divider;
   Color get shadow;
   Color get overlay;
-  
+
   // Component Specific
   Color get buttonPrimary;
   Color get buttonSecondary;
@@ -113,7 +135,7 @@ abstract class DesignColors {
   Color get inputBorderError;
   Color get cardBackground;
   Color get cardBorder;
-  
+
   // Dark Theme
   Color get darkBackgroundPrimary;
   Color get darkBackgroundSecondary;
@@ -135,7 +157,7 @@ abstract class DesignSpacing {
   double get xxxl;
   double get huge;
   double get massive;
-  
+
   // Component Specific
   double get cardPadding;
   EdgeInsets get buttonPadding;
@@ -143,11 +165,11 @@ abstract class DesignSpacing {
   EdgeInsets get screenPadding;
   EdgeInsets get listItemPadding;
   EdgeInsets get dialogPadding;
-  
+
   // Layout Helpers
   SizedBox vertical(double height) => SizedBox(height: height);
   SizedBox horizontal(double width) => SizedBox(width: width);
-  
+
   // Border Radius
   double get radiusXs;
   double get radiusSm;
@@ -156,7 +178,7 @@ abstract class DesignSpacing {
   double get radiusXl;
   double get radiusXxl;
   double get radiusFull;
-  
+
   BorderRadius get borderRadiusXs => BorderRadius.circular(radiusXs);
   BorderRadius get borderRadiusSm => BorderRadius.circular(radiusSm);
   BorderRadius get borderRadiusMd => BorderRadius.circular(radiusMd);
@@ -164,7 +186,7 @@ abstract class DesignSpacing {
   BorderRadius get borderRadiusXl => BorderRadius.circular(radiusXl);
   BorderRadius get borderRadiusXxl => BorderRadius.circular(radiusXxl);
   BorderRadius get borderRadiusFull => BorderRadius.circular(radiusFull);
-  
+
   // Icon Sizes
   double get iconXs;
   double get iconSm;
@@ -177,32 +199,32 @@ abstract class DesignSpacing {
 /// 타이포그래피 시스템 인터페이스
 abstract class DesignTypography {
   String get fontFamily;
-  
+
   // Display Styles
   TextStyle get displayLarge;
   TextStyle get displayMedium;
   TextStyle get displaySmall;
-  
+
   // Headline Styles
   TextStyle get headlineLarge;
   TextStyle get headlineMedium;
   TextStyle get headlineSmall;
-  
+
   // Title Styles
   TextStyle get titleLarge;
   TextStyle get titleMedium;
   TextStyle get titleSmall;
-  
+
   // Body Styles
   TextStyle get bodyLarge;
   TextStyle get bodyMedium;
   TextStyle get bodySmall;
-  
+
   // Label Styles
   TextStyle get labelLarge;
   TextStyle get labelMedium;
   TextStyle get labelSmall;
-  
+
   // Custom Styles
   TextStyle get button;
   TextStyle get link;
@@ -210,7 +232,7 @@ abstract class DesignTypography {
   TextStyle get hint;
   TextStyle get caption;
   TextStyle get overline;
-  
+
   // Font Weights
   FontWeight get thin;
   FontWeight get light;

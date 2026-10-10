@@ -183,8 +183,10 @@ void main() {
       final ok = await service.changePin('123456', '654321');
       expect(ok, true);
       expect((await service.verifyPin('654321')).isSuccess, true);
-      expect((await service.verifyPin('123456')).outcome,
-          PinVerifyOutcome.wrong);
+      expect(
+        (await service.verifyPin('123456')).outcome,
+        PinVerifyOutcome.wrong,
+      );
     });
 
     test('changePin: 틀린 기존 PIN이면 실패하고 기존 유지', () async {
@@ -199,8 +201,10 @@ void main() {
       await service.verifyPin('000000');
       await service.clearPin();
       expect(await service.hasPin(), false);
-      expect((await service.verifyPin('123456')).outcome,
-          PinVerifyOutcome.noPin);
+      expect(
+        (await service.verifyPin('123456')).outcome,
+        PinVerifyOutcome.noPin,
+      );
       expect(store.map.isEmpty, true);
     });
 
@@ -221,12 +225,55 @@ void main() {
       expect(d, isNotNull);
       expect(d!.inSeconds, inInclusiveRange(29, 30));
       // 조회만으로 잠금이 바뀌지 않음
-      expect((await service.lockRemaining())!.inSeconds, inInclusiveRange(29, 30));
+      expect(
+        (await service.lockRemaining())!.inSeconds,
+        inInclusiveRange(29, 30),
+      );
     });
 
     test('잠금이 없으면 null', () async {
       await service.setPin('123456');
       expect(await service.lockRemaining(), isNull);
+    });
+  });
+
+  group('계정 바인딩 (이메일 복구 소유자 확인)', () {
+    test('바인딩이 없으면 어떤 계정도 복구할 수 없다 (fail-closed)', () async {
+      await service.setPin('123456');
+
+      expect(await service.boundAccountUid(), isNull);
+      expect(await service.isRecoveryAccount('uid-a'), isFalse);
+      expect(await service.isRecoveryAccount(null), isFalse);
+    });
+
+    test('PIN을 만든 계정만 복구할 수 있다', () async {
+      await service.setPin('123456', boundUid: 'uid-owner');
+
+      expect(await service.isRecoveryAccount('uid-owner'), isTrue);
+      expect(await service.isRecoveryAccount('uid-attacker'), isFalse);
+      expect(await service.isRecoveryAccount(null), isFalse);
+    });
+
+    test('로그아웃 상태에서 PIN을 바꿔도 소유자 바인딩은 유지된다', () async {
+      await service.setPin('123456', boundUid: 'uid-owner');
+      await service.changePin('123456', '654321');
+
+      expect(await service.isRecoveryAccount('uid-owner'), isTrue);
+    });
+
+    test('다른 계정으로 로그인한 채 PIN을 다시 만들면 새 계정으로 바뀐다', () async {
+      await service.setPin('123456', boundUid: 'uid-a');
+      await service.setPin('654321', boundUid: 'uid-b');
+
+      expect(await service.isRecoveryAccount('uid-a'), isFalse);
+      expect(await service.isRecoveryAccount('uid-b'), isTrue);
+    });
+
+    test('clearPin은 바인딩도 지운다', () async {
+      await service.setPin('123456', boundUid: 'uid-owner');
+      await service.clearPin();
+
+      expect(await service.boundAccountUid(), isNull);
     });
   });
 }

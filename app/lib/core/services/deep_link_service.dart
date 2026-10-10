@@ -56,3 +56,54 @@ class DeepLinkService {
     _started = false;
   }
 }
+
+/// 스플래시가 끝나기 전에 도착한 딥링크를 보관하는 보류 슬롯 (콜드 스타트 링크 포함).
+///
+/// 스플래시는 동의·ATT·점검/강제업데이트·온보딩·잠금 분기를 소유한다. 그 전에
+/// `go(location)`하면 스플래시가 사라지며 그 흐름을 전부 건너뛴다. 그래서 스플래시
+/// 이동 전에는 [offer]가 링크를 보관하고, 스플래시가 이동한 뒤 [markReady]가
+/// 보관된 링크를 꺼내 준다.
+class PendingDeepLink {
+  PendingDeepLink._();
+
+  static bool _ready = false;
+  static String? _pending;
+
+  /// 위치를 바로 이동해도 되면 그대로 돌려주고, 아직이면 보관하고 null을 돌려준다.
+  /// 마지막으로 도착한 링크만 남긴다.
+  static String? offer(String location) {
+    if (_ready) return location;
+    _pending = location;
+    return null;
+  }
+
+  /// 스플래시 이동이 끝났다. 보관된 링크가 있으면 돌려주고 비운다.
+  static String? markReady() {
+    _ready = true;
+    final p = _pending;
+    _pending = null;
+    return p;
+  }
+
+  static String? _afterUnlock;
+
+  /// 앱 잠금·온보딩 때문에 튕긴 원래 목적지를 잠금 해제(또는 온보딩 완료) 뒤까지 보관한다.
+  static void holdForUnlock(String location) => _afterUnlock = location;
+
+  /// 보관된 목적지를 꺼내지 않고 본다 (redirect의 "이미 인증됨" 분기용 — 꺼내는 곳은 한 곳뿐이다).
+  static String? peekAfterUnlock() => _afterUnlock;
+
+  /// 잠금이 풀렸다. 보관된 목적지가 있으면 그곳, 없으면 [fallback].
+  static String takeAfterUnlock(String fallback) {
+    final p = _afterUnlock ?? fallback;
+    _afterUnlock = null;
+    return p;
+  }
+
+  /// 테스트 격리용.
+  static void reset() {
+    _ready = false;
+    _pending = null;
+    _afterUnlock = null;
+  }
+}

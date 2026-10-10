@@ -6,11 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// BuildContext extension for easy access to design system
 extension DesignContext on BuildContext {
   /// 현재 디자인 시스템을 가져옵니다
-  DesignSystem get design {
-    // ProviderScope.containerOf를 사용하여 Provider에 접근
-    final container = ProviderScope.containerOf(this);
-    return container.read(designSystemProvider);
-  }
+  ///
+  /// 테마의 [DesignSystemExtension]에서 읽으므로 디자인 시스템이 바뀌면 호출한 위젯이 다시
+  /// 그려진다. 앱 테마 밖(확장이 없는 테마)에서는 provider 값으로 폴백한다.
+  DesignSystem get design =>
+      Theme.of(this).extension<DesignSystemExtension>()?.design ??
+      ProviderScope.containerOf(this).read(designSystemProvider);
 
   /// 현재 디자인 시스템의 색상을 가져옵니다
   DesignColors get colors => design.colors;

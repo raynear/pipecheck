@@ -29,12 +29,7 @@ import 'package:utils/utils.dart';
 /// ```
 
 /// 스낵바 타입 정의
-enum SnackBarType {
-  success,
-  error,
-  info,
-  warning,
-}
+enum SnackBarType { success, error, info, warning }
 
 /// 스낵바 정보를 담는 클래스
 class SnackBarInfo {
@@ -53,7 +48,10 @@ class SnackBarInfo {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is SnackBarInfo && other.message == message && other.type == type && other.id == id;
+    return other is SnackBarInfo &&
+        other.message == message &&
+        other.type == type &&
+        other.id == id;
   }
 
   @override
@@ -113,47 +111,57 @@ class SnackBarService {
   final Ref _ref;
   bool _isShowing = false;
   Timer? _delayTimer;
+  // 표시 시간 만료 타이머 — 탭으로 먼저 닫히면 취소해야 한다(안 그러면 완료 처리가 두 번 돈다).
+  Timer? _completeTimer;
 
   SnackBarService(this._notifier, this._ref);
 
   /// 성공 스낵바 추가
   void showSuccess(String message, {String? id, Duration? duration}) {
-    _notifier.addSnackBar(SnackBarInfo(
-      message: message,
-      type: SnackBarType.success,
-      id: id,
-      duration: duration,
-    ));
+    _notifier.addSnackBar(
+      SnackBarInfo(
+        message: message,
+        type: SnackBarType.success,
+        id: id,
+        duration: duration,
+      ),
+    );
   }
 
   /// 에러 스낵바 추가
   void showError(String message, {String? id, Duration? duration}) {
-    _notifier.addSnackBar(SnackBarInfo(
-      message: message,
-      type: SnackBarType.error,
-      id: id,
-      duration: duration,
-    ));
+    _notifier.addSnackBar(
+      SnackBarInfo(
+        message: message,
+        type: SnackBarType.error,
+        id: id,
+        duration: duration,
+      ),
+    );
   }
 
   /// 정보 스낵바 추가
   void showInfo(String message, {String? id, Duration? duration}) {
-    _notifier.addSnackBar(SnackBarInfo(
-      message: message,
-      type: SnackBarType.info,
-      id: id,
-      duration: duration,
-    ));
+    _notifier.addSnackBar(
+      SnackBarInfo(
+        message: message,
+        type: SnackBarType.info,
+        id: id,
+        duration: duration,
+      ),
+    );
   }
 
   /// 경고 스낵바 추가
   void showWarning(String message, {String? id, Duration? duration}) {
-    _notifier.addSnackBar(SnackBarInfo(
-      message: message,
-      type: SnackBarType.warning,
-      id: id,
-      duration: duration,
-    ));
+    _notifier.addSnackBar(
+      SnackBarInfo(
+        message: message,
+        type: SnackBarType.warning,
+        id: id,
+        duration: duration,
+      ),
+    );
   }
 
   /// 스낵바 표시 처리 (context를 내부에서 GoRouter로 얻음)
@@ -208,7 +216,10 @@ class SnackBarService {
     }
 
     // rootNavigatorKey 사용하여 올바른 Overlay context 찾기
-    final rootNavigatorKey = _ref.read(goRouterProvider).routerDelegate.navigatorKey;
+    final rootNavigatorKey = _ref
+        .read(goRouterProvider)
+        .routerDelegate
+        .navigatorKey;
     final overlayState = rootNavigatorKey.currentState?.overlay;
 
     if (overlayState == null) {
@@ -223,7 +234,7 @@ class SnackBarService {
       displayDuration: snackBarInfo.duration ?? const Duration(seconds: 3),
       onTap: () {
         // 탭하면 즉시 닫기
-        _onSnackBarComplete(snackBarInfo);
+        onSnackBarComplete(snackBarInfo);
       },
     );
 
@@ -235,15 +246,21 @@ class SnackBarService {
   void _scheduleSnackBarComplete(SnackBarInfo snackBarInfo) {
     final duration = snackBarInfo.duration ?? const Duration(seconds: 3);
 
-    Timer(duration + const Duration(milliseconds: 100), () {
-      _onSnackBarComplete(snackBarInfo);
+    _completeTimer?.cancel();
+    _completeTimer = Timer(duration + const Duration(milliseconds: 100), () {
+      onSnackBarComplete(snackBarInfo);
     });
   }
 
   /// 스낵바 표시 완료 처리
-  void _onSnackBarComplete(SnackBarInfo snackBarInfo) {
+  @visibleForTesting
+  void onSnackBarComplete(SnackBarInfo snackBarInfo) {
+    _completeTimer?.cancel();
+    _completeTimer = null;
     _isShowing = false;
-    _notifier.removeFirst();
+    // 맨 앞이 자기 자신일 때만 제거 — cancelAll 등으로 이미 사라진 항목의 늦은 신호가
+    // 큐의 다른 메시지를 지우지 않게 한다.
+    if (_notifier.nextSnackBar == snackBarInfo) _notifier.removeFirst();
 
     // 다음 스낵바가 있으면 잠시 후 표시
     if (!_notifier.isEmpty) {
@@ -257,6 +274,8 @@ class SnackBarService {
   /// 모든 스낵바 취소
   void cancelAll() {
     _delayTimer?.cancel();
+    _completeTimer?.cancel();
+    _completeTimer = null;
     _notifier.clearAll();
     _isShowing = false;
   }
@@ -264,6 +283,7 @@ class SnackBarService {
   /// 리소스 정리
   void dispose() {
     _delayTimer?.cancel();
+    _completeTimer?.cancel();
   }
 }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:pipecheck/core/services/deep_link_service.dart';
 import 'package:pipecheck/core/services/authentication_service.dart';
 import 'package:pipecheck/core/services/pin_service.dart';
 import 'package:pipecheck/core/services/snackbar_service.dart';
@@ -26,7 +27,8 @@ class AuthenticationView extends ConsumerStatefulWidget {
   const AuthenticationView({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _AuthenticationViewState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _AuthenticationViewState();
 }
 
 class _AuthenticationViewState extends ConsumerState<AuthenticationView> {
@@ -66,10 +68,11 @@ class _AuthenticationViewState extends ConsumerState<AuthenticationView> {
 
   void _navigateHome() {
     if (!context.mounted) return;
-    if (context.canPop()) {
+    final next = PendingDeepLink.takeAfterUnlock('/home');
+    if (next == '/home' && context.canPop()) {
       context.pop();
     } else {
-      context.go('/home');
+      context.go(next);
     }
   }
 
@@ -85,7 +88,11 @@ class _AuthenticationViewState extends ConsumerState<AuthenticationView> {
       final ok = await AuthenticationService().authenticateWithBiometrics();
       if (!mounted) return;
       if (ok) {
-        ref.read(authStateProvider.notifier).setAuthState(AuthState.authenticated(method: AuthMethod.biometric));
+        ref
+            .read(authStateProvider.notifier)
+            .setAuthState(
+              AuthState.authenticated(method: AuthMethod.biometric),
+            );
         _navigateHome();
       } else {
         ref.read(snackBarServiceProvider).showError('auth.biometricFailed');
@@ -105,12 +112,16 @@ class _AuthenticationViewState extends ConsumerState<AuthenticationView> {
     _isVerifying = false;
     switch (result.outcome) {
       case PinVerifyOutcome.success:
-        ref.read(authStateProvider.notifier).setAuthState(AuthState.authenticated(method: AuthMethod.pin));
+        ref
+            .read(authStateProvider.notifier)
+            .setAuthState(AuthState.authenticated(method: AuthMethod.pin));
         _navigateHome();
       case PinVerifyOutcome.wrong:
         setState(() {
           _pinError = result.attemptsRemaining <= 2
-              ? 'auth.pin.attemptsLeft'.tr(args: ['${result.attemptsRemaining}'])
+              ? 'auth.pin.attemptsLeft'.tr(
+                  args: ['${result.attemptsRemaining}'],
+                )
               : 'auth.pin.incorrect'.tr();
         });
         _pinEntryController.shake();
@@ -165,7 +176,9 @@ class _AuthenticationViewState extends ConsumerState<AuthenticationView> {
 
     // 진입 시 자동 동작: 생체 프롬프트(biometric) 또는 자동 통과(none).
     if (option == UserAuthOption.biometric) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _autoPromptBiometric());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _autoPromptBiometric(),
+      );
     } else if (option == UserAuthOption.none) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _navigateHome());
     }
@@ -186,14 +199,31 @@ class _AuthenticationViewState extends ConsumerState<AuthenticationView> {
   Widget _buildAuthBody(UserAuthOption option) {
     final showBiometric = option == UserAuthOption.biometric;
     // PIN 폴백: pin 모드이거나, 생체 모드인데 PIN이 설정돼 있으면.
-    final showPin = option == UserAuthOption.pin || (showBiometric && _pinAvailable);
+    final showPin =
+        option == UserAuthOption.pin || (showBiometric && _pinAvailable);
+
+    // 복구 진입점은 **항상** 보인다. 생체 전용 잠금(PIN 기능 OFF 포크·레거시)에서
+    // 기기의 생체 정보를 지우면 풀 방법이 없어 영구 잠금이 되기 때문이다.
+    // 복구 화면의 "앱 데이터 초기화"는 항상 남아 있어 갇히지 않는다.
+    final recoveryLink = TextButton(
+      onPressed: () => context.push('/pin-recovery'),
+      child: SText('auth.pin.forgotPin'),
+    );
 
     // 레거시: PIN 없는 생체 설정 → 생체 전용 화면.
     if (showBiometric && !showPin) {
-      return IconButton(
-        icon: const Icon(Icons.face_unlock_outlined),
-        onPressed: _triggerBiometric,
-        iconSize: 96,
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.face_unlock_outlined),
+            onPressed: _triggerBiometric,
+            iconSize: 96,
+          ),
+          const SizedBox(height: 8),
+          recoveryLink,
+        ],
       );
     }
 
@@ -217,13 +247,7 @@ class _AuthenticationViewState extends ConsumerState<AuthenticationView> {
             label: SText('auth.pin.useBiometric'),
           ),
         ],
-        if (showPin) ...[
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => context.push('/pin-recovery'),
-            child: SText('auth.pin.forgotPin'),
-          ),
-        ],
+        if (showPin) ...[const SizedBox(height: 8), recoveryLink],
       ],
     );
   }

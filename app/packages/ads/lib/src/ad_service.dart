@@ -35,13 +35,39 @@ class AdService {
   AdsConfig _config = const AdsConfig.disabled();
   AdUnitIds _adUnitIds = const AdUnitIds();
 
-  // 매니저들
-  late final FullscreenAdManager fullscreenAds;
-  late final BannerAdManager bannerAds;
-  late final AppOpenAdManager appOpenAd;
+  // 매니저들 — 첫 접근 시 **현재** _config/_adUnitIds로 만든다(미생성 접근이
+  // 던지지 않아야 하고, configure()보다 먼저 닿아도 낡은 설정이 고정되면 안 된다).
+  // 실제 광고 요청 안전판은 매니저의 config가 아니라
+  // AdConsentManager.canRequestAdsNow(기본 false)다.
+  FullscreenAdManager? _fullscreenAds;
+  BannerAdManager? _bannerAds;
+  AppOpenAdManager? _appOpenAd;
+
+  FullscreenAdManager get fullscreenAds => _fullscreenAds ??= FullscreenAdManager(
+        config: _config,
+        rewardedAdId: _adUnitIds.rewarded,
+        rewardedInterstitialAdId: _adUnitIds.rewardedInterstitial,
+        interstitialAdId: _adUnitIds.interstitial,
+        nativeAdId: _adUnitIds.native,
+        ensureInitialized: ensureInitialized,
+      );
+
+  BannerAdManager get bannerAds => _bannerAds ??= BannerAdManager(
+        config: _config,
+        bannerAdId: _adUnitIds.banner,
+        ensureInitialized: ensureInitialized,
+      );
+
+  AppOpenAdManager get appOpenAd => _appOpenAd ??= AppOpenAdManager(
+        config: _config,
+        appOpenAdId: _adUnitIds.appOpen,
+      );
 
   /// 앱이 부팅 시점에 플래그 + 해석된 광고 단위 ID + 개인화 동의 콜백을 주입한다.
-  /// AdConsentManager에도 같은 설정을 전달한다. initialize() 전에 호출해야 한다.
+  /// AdConsentManager에도 같은 설정을 전달한다.
+  ///
+  /// 이미 만들어진 매니저는 낡은 설정 스냅샷을 들고 있으므로 버린다 — 순서가
+  /// 뒤집혀도(configure()가 첫 접근보다 늦어도) 실설정이 실린다.
   void configure({
     required AdsConfig config,
     required AdUnitIds adUnitIds,
@@ -49,7 +75,19 @@ class AdService {
   }) {
     _config = config;
     _adUnitIds = adUnitIds;
+    _dropManagers();
     AdConsentManager.configure(config: config, personalizedAds: personalizedAds);
+  }
+
+  /// 만들어진 매니저만 해제하고 버린다 — 미생성 매니저를 **만들지 않는다**
+  /// (만들면 그 시점 설정으로 스냅샷이 확정된다).
+  void _dropManagers() {
+    _fullscreenAds?.dispose();
+    _bannerAds?.dispose();
+    _appOpenAd?.dispose();
+    _fullscreenAds = null;
+    _bannerAds = null;
+    _appOpenAd = null;
   }
 
   // SDK 초기화
@@ -76,8 +114,15 @@ class AdService {
       logger.d('Ad consent not granted - skipping SDK initialization');
       return;
     }
-    _initializationFuture ??= _initialize();
-    await _initializationFuture;
+    final future = _initializationFuture ??= _initialize();
+    try {
+      await future;
+    } catch (_) {
+      // 실패를 캐시하면 일시적 오류(네트워크 등) 한 번으로 이 세션의 광고가 영구히 죽는다 —
+      // 다음 호출이 다시 시도하게 비운다. 호출자(show 계열)는 던져진 예외를 onAdFailed로 처리한다.
+      if (identical(_initializationFuture, future)) _initializationFuture = null;
+      rethrow;
+    }
   }
 
   // 메인 초기화 메서드
@@ -94,29 +139,6 @@ class AdService {
     interstitialAdId = _adUnitIds.interstitial;
     nativeAdId = _adUnitIds.native;
     appOpenAdId = _adUnitIds.appOpen;
-
-    // 매니저 초기화 — 동의 게이트보다 먼저 생성한다 (SDK 호출 없음).
-    // 동의가 거부돼도 delegate 접근(createBannerAd 등)이 크래시하지 않고,
-    // 각 로드 메서드의 동의 게이트가 빈 위젯/no-op으로 처리한다.
-    fullscreenAds = FullscreenAdManager(
-      config: _config,
-      rewardedAdId: rewardedAdId,
-      rewardedInterstitialAdId: rewardedInterstitialAdId,
-      interstitialAdId: interstitialAdId,
-      nativeAdId: nativeAdId,
-      ensureInitialized: ensureInitialized,
-    );
-
-    bannerAds = BannerAdManager(
-      config: _config,
-      bannerAdId: bannerAdId,
-      ensureInitialized: ensureInitialized,
-    );
-
-    appOpenAd = AppOpenAdManager(
-      config: _config,
-      appOpenAdId: appOpenAdId,
-    );
 
     // UMP 동의 수집 — SDK 초기화/광고 로드 전에 수행 (P1-13c).
     // EEA에서 동의가 거부/미수집되면 이 세션은 광고 없이 동작한다.
@@ -216,11 +238,11 @@ class AdService {
       fullscreenAds.getNativeAdWidget(context);
 
   // 배너 광고 생성
-  Future<(double, Widget)> createBannerAd([String key = 'default']) =>
-      bannerAds.createBannerAd(key);
+  Future<(double, Widget)> createBannerAd([String key = 'default', Object? owner]) =>
+      bannerAds.createBannerAd(key, owner);
 
   // 배너 광고 해제
-  void disposeBannerAd(String key) => bannerAds.disposeBannerAd(key);
+  void disposeBannerAd(String key, [Object? owner]) => bannerAds.disposeBannerAd(key, owner);
 
   // 배너 광고 새로고침
   Future<(double, Widget)> refreshBannerAd(String key) =>
@@ -236,9 +258,7 @@ class AdService {
 
   // 모든 리소스 해제
   void dispose() {
-    fullscreenAds.dispose();
-    bannerAds.dispose();
-    appOpenAd.dispose();
+    _dropManagers();
     logger.d('All ads disposed');
   }
 }

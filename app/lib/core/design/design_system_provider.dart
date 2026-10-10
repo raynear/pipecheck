@@ -82,7 +82,11 @@ final themeProvider = Provider<(ThemeData, ThemeData, ThemeMode)>((ref) {
     final effectiveThemeMode = AppFeatureConfig.isDarkModeEnabled
         ? settings.displayMode
         : ThemeMode.light;
-    return (designSystem.lightTheme, designSystem.darkTheme, effectiveThemeMode);
+    return (
+      _withDesign(designSystem.lightTheme, designSystem),
+      _withDesign(designSystem.darkTheme, designSystem),
+      effectiveThemeMode,
+    );
   }
 
   // Material3인 경우 동적으로 생성 (FlexScheme, 언어별 폰트 지원)
@@ -94,8 +98,17 @@ final themeProvider = Provider<(ThemeData, ThemeData, ThemeMode)>((ref) {
       ? settings.displayMode
       : ThemeMode.light;
 
-  return (lightTheme, darkTheme, effectiveThemeMode);
+  return (
+    _withDesign(lightTheme, designSystem),
+    _withDesign(darkTheme, designSystem),
+    effectiveThemeMode,
+  );
 });
+
+/// 테마에 현재 디자인 시스템을 실어 `context.design`이 테마 변화에 반응하게 한다.
+ThemeData _withDesign(ThemeData theme, DesignSystem design) => theme.copyWith(
+  extensions: [...theme.extensions.values, DesignSystemExtension(design)],
+);
 
 /// Material3 테마 생성 (FlexScheme 및 언어별 폰트 지원)
 ThemeData _createMaterial3Theme(Brightness brightness, Settings settings) {
@@ -108,8 +121,12 @@ ThemeData _createMaterial3Theme(Brightness brightness, Settings settings) {
 
   // FlexScheme 사용하여 기본 테마 생성
   final baseTheme = brightness == Brightness.light
-      ? FlexThemeData.light(scheme: themeColors[settings.themeColor] ?? FlexScheme.blueM3)
-      : FlexThemeData.dark(scheme: themeColors[settings.themeColor] ?? FlexScheme.blueM3);
+      ? FlexThemeData.light(
+          scheme: themeColors[settings.themeColor] ?? FlexScheme.blueM3,
+        )
+      : FlexThemeData.dark(
+          scheme: themeColors[settings.themeColor] ?? FlexScheme.blueM3,
+        );
 
   // 텍스트 스타일 생성 헬퍼 함수 (중복 제거)
   TextStyle createTextStyle(double sizeOffset, [String? fontFamily]) {
@@ -143,7 +160,5 @@ ThemeData _createMaterial3Theme(Brightness brightness, Settings settings) {
   );
 
   // 최종 테마 반환
-  return baseTheme.copyWith(
-    primaryTextTheme: textTheme,
-  );
+  return baseTheme.copyWith(primaryTextTheme: textTheme);
 }

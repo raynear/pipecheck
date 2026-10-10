@@ -818,6 +818,7 @@
     }
   },
   "• Purchases are made through your App Store account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.": "• Purchases are made through your App Store account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.",
+  "• Purchases are made through your Google Play account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.": "• Purchases are made through your Google Play account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.",
   "• Subscription will automatically renew unless canceled at least 24 hours before the end of the current period": "• 除非在当前订阅期结束前至少24小时取消，否则订阅将自动续订",
   "Purchase failed": "购买失败",
   "Failed to activate subscription": "无法激活订阅",

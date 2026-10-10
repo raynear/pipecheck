@@ -1,6 +1,7 @@
 import 'package:pipecheck/config/app_config.dart';
 import 'package:pipecheck/config/app_feature_config.dart';
 import 'package:pipecheck/core/services/in_app_purchase_service.dart';
+import 'package:pipecheck/core/services/deep_link_service.dart';
 import 'package:pipecheck/core/state/settings.dart';
 import 'package:pipecheck/core/widgets/buttons/adaptive_button.dart';
 import 'package:pipecheck/core/widgets/common/semantics.dart';
@@ -274,7 +275,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                               await ref.read(settingsProvider.notifier)
                                   .updateSingleSetting(onBoard: true);
                               if (!context.mounted) return;
-                              context.go('/home');
+                              context.go(PendingDeepLink.takeAfterUnlock('/home'));
                             },
                             variant: ButtonVariant.text,
                             child: SText('Skip'),
@@ -303,7 +304,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                                 await ref.read(settingsProvider.notifier)
                                     .updateSingleSetting(onBoard: true);
                                 if (!context.mounted) return;
-                                context.go('/home');
+                                context.go(PendingDeepLink.takeAfterUnlock('/home'));
                               },
                               variant: ButtonVariant.primary,
                               child: SText('Get Started'),
@@ -664,7 +665,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         );
         await ref.read(settingsProvider.notifier).updateSingleSetting(onBoard: true);
         if (!mounted) return;
-        context.go('/home');
+        context.go(PendingDeepLink.takeAfterUnlock('/home'));
       }
     } catch (_) {
       // Product not found

@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:pipecheck/config/app_config.dart';
 import 'package:pipecheck/config/app_feature_config.dart';
+import 'package:pipecheck/core/services/deep_link_service.dart';
 import 'package:pipecheck/core/services/in_app_purchase_service.dart';
 import 'package:pipecheck/core/state/settings.dart';
 import 'package:pipecheck/features/onboarding/views/onboarding_view.dart';
@@ -75,6 +76,7 @@ Future<void> _pump(WidgetTester tester, {Settings? initial}) async {
   final router = GoRouter(routes: [
     GoRoute(path: '/', builder: (_, _) => const OnboardingView()),
     GoRoute(path: '/home', builder: (_, _) => const Scaffold(body: Text('home-page'))),
+    GoRoute(path: '/settings', builder: (_, _) => const Scaffold(body: Text('settings-page'))),
   ]);
   container = ProviderContainer(overrides: [inAppPurchaseServiceProvider.overrideWithValue(iap)]);
   addTearDown(container.dispose);
@@ -179,6 +181,26 @@ void main() {
       expect(_t('home-page'), findsOneWidget);
     });
 
+    testWidgets('N8: 온보딩 중 보관된 딥링크는 건너뛰기 뒤에 이어 열린다(한 번만)', (tester) async {
+      PendingDeepLink.reset();
+      addTearDown(PendingDeepLink.reset);
+      PendingDeepLink.holdForUnlock('/settings');
+      await _pump(tester);
+      await _tap(tester, _t('Skip'));
+      expect(_t('settings-page'), findsOneWidget);
+      expect(PendingDeepLink.takeAfterUnlock('/x'), '/x');
+    });
+
+    testWidgets('N8: 보관된 딥링크는 Get Started 뒤에도 이어 열린다', (tester) async {
+      PendingDeepLink.reset();
+      addTearDown(PendingDeepLink.reset);
+      PendingDeepLink.holdForUnlock('/settings');
+      await _pump(tester);
+      await _toLastPage(tester, 4);
+      await _tap(tester, _t('Get Started'));
+      expect(_t('settings-page'), findsOneWidget);
+    });
+
     testWidgets('Skip은 중간 페이지에서도 완료를 저장하고 홈으로 간다', (tester) async {
       await _pump(tester);
       await _tap(tester, _t('Next'));
@@ -225,6 +247,16 @@ void main() {
       expect(iap.bought, ['m']);
       expect(container.read(settingsProvider).onBoard, isTrue);
       expect(_t('home-page'), findsOneWidget);
+    });
+
+    testWidgets('N8: 보관된 딥링크는 구독 성공 뒤에도 이어 열린다', (tester) async {
+      PendingDeepLink.reset();
+      addTearDown(PendingDeepLink.reset);
+      PendingDeepLink.holdForUnlock('/settings');
+      await _pump(tester);
+      await _toLastPage(tester, 5);
+      await _tap(tester, _t('Subscribe Now'));
+      expect(_t('settings-page'), findsOneWidget);
     });
 
     testWidgets('연간 선택', (tester) async {

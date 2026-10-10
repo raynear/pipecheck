@@ -1,14 +1,23 @@
 import 'package:pipecheck/config/app_config.dart';
+import 'package:pipecheck/core/router.dart' show Routes;
 import 'package:pipecheck/core/services/in_app_purchase_service.dart';
 import 'package:pipecheck/core/widgets/buttons/adaptive_button.dart';
 import 'package:pipecheck/core/widgets/buttons/analytics_buttons.dart';
 import 'package:pipecheck/core/widgets/common/semantics.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:utils/utils.dart';
+
+/// 결제 계정 문구 — 플랫폼별 스토어 이름(Android에서 "App Store"라고 쓰지 않는다).
+@visibleForTesting
+String purchaseTermsKeyFor(TargetPlatform platform) =>
+    platform == TargetPlatform.android
+        ? '• Purchases are made through your Google Play account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.'
+        : '• Purchases are made through your App Store account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.';
 
 class SubscriptionView extends ConsumerStatefulWidget {
   const SubscriptionView({super.key});
@@ -107,7 +116,11 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
     //   );
     // }
 
-    return Container(
+    // Material: `/subscription` 라우트로 단독 진입해도(딥링크) 머티리얼 컨텍스트와 닫기 버튼이 있다.
+    // Scaffold는 쓰지 않는다 — 설정에서는 SingleChildScrollView 안(무한 높이)에 이 화면을 넣는다.
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
       height: MediaQuery.of(context).size.height * 1.0,
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -115,13 +128,29 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
       ),
       child: Column(
         children: [
-          Container(
-            height: 5,
-            width: 40,
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.onSurface.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(2.5),
+          SizedBox(
+            height: 48,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  height: 5,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurface.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: IconButton(
+                    key: const Key('subscription.close'),
+                    tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                    icon: const Icon(Icons.close),
+                    onPressed: _close,
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -168,7 +197,7 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
                           style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
-                        SText('• Purchases are made through your App Store account. You will automatically be charged for renewal unless you cancel. You can cancel anytime.',
+                        SText(_purchaseTermsKey(),
                           style: textTheme.bodyMedium,
                         ),
                         Row(
@@ -232,8 +261,21 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
           ),
         ],
       ),
+      ),
     );
   }
+
+  /// 시트면 닫고, 쌓인 화면이 없는 단독 진입(딥링크 콜드 스타트)이면 홈으로 보낸다.
+  void _close() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.maybePop();
+      return;
+    }
+    GoRouter.maybeOf(context)?.go(Routes.home);
+  }
+
+  String _purchaseTermsKey() => purchaseTermsKeyFor(defaultTargetPlatform);
 
   Widget _buildSubscriptionOption(String title, String price, String subscriptionType) {
     final textTheme = Theme.of(context).textTheme;
@@ -250,7 +292,12 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
       renewalText = 'One-time purchase'.tr();
     }
 
-    return GestureDetector(
+    // label 없이 감싼다 — 안쪽 Text들이 이 버튼의 이름으로 합쳐져 읽힌다.
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      inMutuallyExclusiveGroup: true,
+      child: GestureDetector(
       onTap: () {
         setState(() {
           _selectedSubscription = subscriptionType;
@@ -296,7 +343,7 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
                     style: textTheme.labelSmall?.copyWith(
                       color: isSelected
                           ? colorScheme.onPrimary.withValues(alpha: 0.7)
-                          : colorScheme.onSurface.withValues(alpha: 0.5),
+                          : colorScheme.onSurfaceVariant,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -306,6 +353,7 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
             if (isSelected) Icon(Icons.check_circle, color: colorScheme.onPrimary),
           ],
         ),
+      ),
       ),
     );
   }
@@ -335,7 +383,7 @@ class _SubscriptionViewState extends ConsumerState<SubscriptionView> {
     if (success) {
       logger.d('Purchase successful');
       if (!mounted) return;
-      context.pop();
+      _close();
     } else {
       logger.e('Purchase failed');
     }

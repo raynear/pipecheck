@@ -60,7 +60,7 @@ class PinVerifyResult {
 /// effectiveNow = max(now, lastAttempt)로 막는다.
 class PinService {
   PinService(this._store, {DateTime Function()? clock})
-      : _now = clock ?? DateTime.now;
+    : _now = clock ?? DateTime.now;
 
   final SecureStore _store;
   final DateTime Function() _now;
@@ -72,6 +72,7 @@ class PinService {
   static const _kUntil = 'pin_lock_until'; // epoch ms
   static const _kLast = 'pin_last_attempt'; // epoch ms (시계 되돌림 가드)
   static const _kLegacy = 'pin_code'; // 23h 이전 평문 (제거 대상)
+  static const _kBoundUid = 'pin_bound_uid'; // PIN 설정 시점의 Firebase 계정
 
   static const int _maxAttempts = 5;
   static const List<Duration> _lockDurations = [
@@ -90,13 +91,19 @@ class PinService {
   Future<bool> hasPin() async => (await _store.read(_kHash)) != null;
 
   /// PIN 설정/재설정. 시도 제한 상태도 초기화한다.
-  Future<void> setPin(String pin) async {
+  ///
+  /// [boundUid]는 PIN을 만든 시점에 로그인돼 있던 계정이다. 이메일 복구가
+  /// "아무 계정"이 아니라 이 계정으로만 잠금을 풀게 하는 기준이 된다. null이면
+  /// 기존 바인딩을 그대로 둔다(로그아웃 상태에서 PIN을 바꿔도 소유자 계정이
+  /// 유지된다). 바인딩 제거는 [clearPin] 몫이다.
+  Future<void> setPin(String pin, {String? boundUid}) async {
     if (!isValidFormat(pin)) {
       throw ArgumentError('PIN must be $kPinLength digits');
     }
     final salt = _generateSalt();
     await _store.write(_kSalt, salt);
     await _store.write(_kHash, _hash(pin, salt));
+    if (boundUid != null) await _store.write(_kBoundUid, boundUid);
     await _resetAttempts();
     await _store.delete(_kLegacy);
   }
@@ -148,9 +155,30 @@ class PinService {
 
   /// PIN과 모든 시도 제한 상태 제거.
   Future<void> clearPin() async {
-    for (final k in [_kHash, _kSalt, _kFail, _kLevel, _kUntil, _kLast, _kLegacy]) {
+    for (final k in [
+      _kHash,
+      _kSalt,
+      _kFail,
+      _kLevel,
+      _kUntil,
+      _kLast,
+      _kLegacy,
+      _kBoundUid,
+    ]) {
       await _store.delete(k);
     }
+  }
+
+  /// PIN에 묶인 계정 uid (없으면 null — 이메일 복구 불가).
+  Future<String?> boundAccountUid() => _store.read(_kBoundUid);
+
+  /// [signedInUid]로 로그인한 계정이 PIN 소유 계정인가.
+  ///
+  /// 바인딩이 없거나 uid가 다르면 false(fail-closed). 기기를 주운 사람이 자기
+  /// Firebase 계정으로 로그인해 잠금을 푸는 것을 막는다.
+  Future<bool> isRecoveryAccount(String? signedInUid) async {
+    final bound = await boundAccountUid();
+    return bound != null && signedInUid != null && bound == signedInUid;
   }
 
   /// 시도 소모 없이 현재 잠금 잔여 시간 조회 (null = 잠금 없음).

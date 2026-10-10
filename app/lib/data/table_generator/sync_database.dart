@@ -166,6 +166,14 @@ void main() async {
   if (modified) {
     await databaseFile.writeAsString(content);
     stdout.writeln('\n✅ database.dart updated successfully');
+    // 스키마가 바뀌었다 — 출시 후라면 기존 설치본은 새 테이블이 없다(`no such table`).
+    // 버전 bump·onUpgrade·덤프는 사람이 판단할 일이라 경고만 한다(출시 전 앱엔 불필요).
+    stdout.writeln(
+      '⚠️  테이블·컬럼을 바꾸면 이미 스토어에 나간 앱은 '
+      'database.dart의 appSchemaVersion을 올리고 onUpgrade에 m.createTable/addColumn을 더한 뒤 '
+      '`drift_schemas/` 덤프를 갱신할 것 (절차: database.dart의 onUpgrade 주석, '
+      'test/unit/drift_migration_test.dart가 빠뜨리면 빨개진다).',
+    );
   } else {
     stdout.writeln('\n✓ database.dart is already up to date');
   }

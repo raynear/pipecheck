@@ -9,6 +9,17 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:utils/utils.dart';
 
+/// 서버 인증 엔진 주입점. 테스트는 가짜를 만들어 이 provider를 override한다
+/// (PIN 복구 계정 대조처럼 Firebase 없이 닿을 수 없던 경로를 검증하려고).
+final emailAuthServiceProvider = Provider<FirebaseEmailAuthService>(
+  (_) => const FirebaseEmailAuthService(),
+);
+
+/// 소셜 인증 엔진 주입점 ([emailAuthServiceProvider]와 같은 이유).
+final socialAuthServiceProvider = Provider<SocialAuthService>(
+  (_) => const SocialAuthService(),
+);
+
 /// 인증 상태를 관리하는 ViewModel (서버 이메일 인증 바인딩).
 ///
 /// 서버 이메일 인증 메커니즘은 `package:authentication`의
@@ -18,8 +29,9 @@ import 'package:utils/utils.dart';
 /// (core/state)에 이중 구현하지 말 것 (docs/MODULES.md §5).
 /// 단, 계정 삭제(클라이언트 직접)는 AuthStateNotifier.deleteAccount 소유.
 class AuthViewModel extends Notifier<AsyncValue<AuthState>> {
-  static const _emailService = FirebaseEmailAuthService();
-  static const _socialService = SocialAuthService();
+  FirebaseEmailAuthService get _emailService =>
+      ref.read(emailAuthServiceProvider);
+  SocialAuthService get _socialService => ref.read(socialAuthServiceProvider);
   StreamSubscription<AuthUser?>? _authSub;
 
   @override
