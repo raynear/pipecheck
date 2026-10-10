@@ -60,7 +60,7 @@ tooling:
   # 로컬 패키지(app/packages/*) 릴리즈 핀 (P2-19d). 파생 앱이 utils 등을
   # git 의존으로 소비할 때의 ref:
   #   utils: {git: {url: <이 repo>, ref: <pkgs_ref>, path: app/packages/utils}}
-  pkgs_ref: "pkgs-v1.0.0"
+  pkgs_ref: "pkgs-v1.1.0"
 
 # ── 스토어 등록 정보 ──
 listing:
